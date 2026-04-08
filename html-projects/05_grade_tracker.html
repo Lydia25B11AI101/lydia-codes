@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Grade Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #fff;
+           padding: 32px 16px; }
+    h1   { text-align: center; color: #c084fc; margin-bottom: 8px; }
+    .sub { text-align: center; color: #888; margin-bottom: 28px; font-size: .9rem; }
+    .form-card { background: #1e1e2e; border-radius: 14px; padding: 24px;
+                 max-width: 600px; margin: 0 auto 28px; }
+    .form-card h2 { color: #c084fc; margin-bottom: 16px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+    input { flex: 1; min-width: 120px; padding: 10px 14px; border-radius: 8px;
+            border: 2px solid #333; background: #0f0f1a; color: #fff; font-size: .95rem; }
+    input:focus { outline: none; border-color: #c084fc; }
+    button.add { width: 100%; padding: 12px; background: #c084fc; color: #0f0f1a;
+                 border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+    table { width: 100%; max-width: 700px; margin: 0 auto; border-collapse: collapse; }
+    th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid #2a2a3e; }
+    th  { background: #1e1e2e; color: #c084fc; }
+    tr:hover td { background: #1e1e2e; }
+    .badge { padding: 4px 10px; border-radius: 20px; font-weight: bold; font-size: .85rem; }
+    .A { background: #14532d; color: #4ade80; }
+    .B { background: #1e3a5f; color: #60a5fa; }
+    .C { background: #3f3900; color: #fbbf24; }
+    .D { background: #431407; color: #fb923c; }
+    .F { background: #7f1d1d; color: #f87171; }
+    .empty { text-align: center; color: #555; padding: 24px; }
+    .summary { background: #1e1e2e; border-radius: 14px; padding: 20px;
+               max-width: 700px; margin: 20px auto 0; display: flex;
+               gap: 20px; flex-wrap: wrap; justify-content: center; }
+    .stat { text-align: center; }
+    .stat .val { font-size: 1.8rem; color: #c084fc; font-weight: bold; }
+    .stat .lbl { font-size: .8rem; color: #888; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>📊 Student Grade Tracker</h1>
+  <p class="sub">Track student marks and automatically calculate grades</p>
+
+  <div class="form-card">
+    <h2>➕ Add Student</h2>
+    <div class="row">
+      <input id="name" placeholder="Student name"/>
+      <input id="m1" type="number" placeholder="Subject 1" min="0" max="100"/>
+      <input id="m2" type="number" placeholder="Subject 2" min="0" max="100"/>
+      <input id="m3" type="number" placeholder="Subject 3" min="0" max="100"/>
+    </div>
+    <button class="add" onclick="addStudent()">Add Student</button>
+  </div>
+
+  <table>
+    <thead><tr><th>#</th><th>Name</th><th>Sub 1</th><th>Sub 2</th><th>Sub 3</th><th>Average</th><th>Grade</th></tr></thead>
+    <tbody id="tbody"><tr><td colspan="7" class="empty">No students yet. Add one above!</td></tr></tbody>
+  </table>
+
+  <div class="summary" id="summary" style="display:none">
+    <div class="stat"><div class="val" id="s-count">0</div><div class="lbl">Students</div></div>
+    <div class="stat"><div class="val" id="s-avg">0</div><div class="lbl">Class Average</div></div>
+    <div class="stat"><div class="val" id="s-high">0</div><div class="lbl">Highest</div></div>
+    <div class="stat"><div class="val" id="s-low">0</div><div class="lbl">Lowest</div></div>
+  </div>
+
+  <script>
+    let students = [];
+
+    function getGrade(avg) {
+      if (avg >= 90) return 'A';
+      if (avg >= 80) return 'B';
+      if (avg >= 70) return 'C';
+      if (avg >= 60) return 'D';
+      return 'F';
+    }
+
+    function addStudent() {
+      const name = document.getElementById('name').value.trim();
+      const m1 = parseFloat(document.getElementById('m1').value);
+      const m2 = parseFloat(document.getElementById('m2').value);
+      const m3 = parseFloat(document.getElementById('m3').value);
+      if (!name || isNaN(m1) || isNaN(m2) || isNaN(m3)) {
+        alert('Please fill in all fields!'); return;
+      }
+      const avg = ((m1 + m2 + m3) / 3).toFixed(1);
+      students.push({ name, m1, m2, m3, avg: parseFloat(avg), grade: getGrade(avg) });
+      ['name','m1','m2','m3'].forEach(id => document.getElementById(id).value = '');
+      render();
+    }
+
+    function render() {
+      const tbody = document.getElementById('tbody');
+      if (!students.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">No students yet. Add one above!</td></tr>';
+        document.getElementById('summary').style.display = 'none'; return;
+      }
+      tbody.innerHTML = students.map((s, i) => `
+        <tr>
+          <td>${i + 1}</td><td>${s.name}</td>
+          <td>${s.m1}</td><td>${s.m2}</td><td>${s.m3}</td>
+          <td><strong>${s.avg}</strong></td>
+          <td><span class="badge ${s.grade}">${s.grade}</span></td>
+        </tr>`).join('');
+      const avgs = students.map(s => s.avg);
+      const classAvg = (avgs.reduce((a,b) => a+b, 0) / avgs.length).toFixed(1);
+      document.getElementById('s-count').textContent = students.length;
+      document.getElementById('s-avg').textContent   = classAvg;
+      document.getElementById('s-high').textContent  = Math.max(...avgs);
+      document.getElementById('s-low').textContent   = Math.min(...avgs);
+      document.getElementById('summary').style.display = 'flex';
+    }
+  </script>
+</body>
+</html>
