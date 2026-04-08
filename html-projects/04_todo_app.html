@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>To-Do List App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff;
+           display: flex; justify-content: center; align-items: flex-start;
+           min-height: 100vh; padding: 40px 16px; }
+    .app   { background: #16213e; border-radius: 16px; padding: 32px;
+             width: 100%; max-width: 500px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
+    h1     { text-align: center; color: #e94560; margin-bottom: 24px; font-size: 1.8rem; }
+    .input-row { display: flex; gap: 10px; margin-bottom: 24px; }
+    input  { flex: 1; padding: 12px 16px; border-radius: 10px; border: 2px solid #333;
+             background: #0f3460; color: #fff; font-size: 1rem; }
+    input:focus { outline: none; border-color: #e94560; }
+    button.add { padding: 12px 20px; background: #e94560; color: #fff; border: none;
+                 border-radius: 10px; font-size: 1rem; cursor: pointer; }
+    button.add:hover { background: #c73652; }
+    .filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filters button { padding: 6px 16px; border-radius: 20px; border: 2px solid #333;
+                      background: transparent; color: #aaa; cursor: pointer; font-size: .85rem; }
+    .filters button.active { border-color: #e94560; color: #e94560; }
+    ul     { list-style: none; }
+    li     { display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+             background: #0f3460; border-radius: 10px; margin-bottom: 10px; }
+    li.done span.text { text-decoration: line-through; color: #555; }
+    li span.text { flex: 1; font-size: 1rem; cursor: pointer; }
+    li button.del { background: #7f1d1d; border: none; color: #f87171;
+                    border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: .85rem; }
+    .stats { text-align: center; color: #888; font-size: .85rem; margin-top: 16px; }
+    .empty { text-align: center; color: #555; padding: 24px; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <h1>📝 To-Do List</h1>
+  <div class="input-row">
+    <input id="task-input" placeholder="Add a new task..." onkeydown="if(event.key==='Enter')addTask()"/>
+    <button class="add" onclick="addTask()">Add</button>
+  </div>
+  <div class="filters">
+    <button class="active" onclick="setFilter('all',this)">All</button>
+    <button onclick="setFilter('active',this)">Active</button>
+    <button onclick="setFilter('done',this)">Done</button>
+  </div>
+  <ul id="task-list"></ul>
+  <p class="stats" id="stats"></p>
+</div>
+<script>
+let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+let filter = 'all';
+
+function save() { localStorage.setItem('tasks', JSON.stringify(tasks)); }
+
+function addTask() {
+  const input = document.getElementById('task-input');
+  const text = input.value.trim();
+  if (!text) return;
+  tasks.push({ id: Date.now(), text, done: false });
+  save(); input.value = ''; render();
+}
+
+function toggleTask(id) {
+  tasks = tasks.map(t => t.id === id ? {...t, done: !t.done} : t);
+  save(); render();
+}
+
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  save(); render();
+}
+
+function setFilter(f, btn) {
+  filter = f;
+  document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render() {
+  const list = document.getElementById('task-list');
+  const filtered = tasks.filter(t =>
+    filter === 'all' ? true : filter === 'done' ? t.done : !t.done
+  );
+  if (!filtered.length) {
+    list.innerHTML = '<p class="empty">No tasks here!</p>';
+  } else {
+    list.innerHTML = filtered.map(t => `
+      <li class="${t.done ? 'done' : ''}">
+        <span class="text" onclick="toggleTask(${t.id})">${t.text}</span>
+        <button class="del" onclick="deleteTask(${t.id})">✕</button>
+      </li>`).join('');
+  }
+  const done = tasks.filter(t => t.done).length;
+  document.getElementById('stats').textContent =
+    `${done} of ${tasks.length} tasks completed`;
+}
+
+render();
+</script>
+</body>
+</html>
