@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Python Quiz App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a;
+           color: #fff; display: flex; justify-content: center;
+           align-items: center; min-height: 100vh; }
+    .quiz  { background: #1e1e2e; border-radius: 16px; padding: 36px;
+             max-width: 560px; width: 95%; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+    h1     { text-align: center; color: #c084fc; margin-bottom: 6px; }
+    .meta  { text-align: center; color: #888; margin-bottom: 24px; font-size: .9rem; }
+    .q-num { color: #c084fc; font-size: .85rem; margin-bottom: 8px; }
+    .q-text{ font-size: 1.15rem; margin-bottom: 20px; line-height: 1.5; }
+    .options button { display: block; width: 100%; text-align: left;
+                      padding: 12px 16px; margin-bottom: 10px;
+                      background: #0f0f1a; color: #ddd; border: 2px solid #333;
+                      border-radius: 10px; cursor: pointer; font-size: 1rem;
+                      transition: all .2s; }
+    .options button:hover { border-color: #c084fc; color: #fff; }
+    .options button.correct { border-color: #4ade80; background: #14532d; color: #fff; }
+    .options button.wrong   { border-color: #f87171; background: #7f1d1d; color: #fff; }
+    .feedback { text-align: center; margin: 16px 0; font-size: 1rem; min-height: 24px; }
+    #next-btn { display: none; margin: 0 auto; padding: 12px 32px;
+                background: #c084fc; color: #0f0f1a; border: none;
+                border-radius: 10px; font-size: 1rem; font-weight: bold;
+                cursor: pointer; }
+    .result { text-align: center; display: none; }
+    .result h2 { font-size: 2rem; color: #c084fc; margin-bottom: 12px; }
+    .result p  { color: #aaa; margin-bottom: 20px; }
+    #restart-btn { padding: 12px 32px; background: #c084fc; color: #0f0f1a;
+                   border: none; border-radius: 10px; font-size: 1rem;
+                   font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div class="quiz" id="quiz">
+  <h1>🐍 Python Quiz</h1>
+  <p class="meta">Test your Python knowledge!</p>
+  <div id="question-area">
+    <p class="q-num" id="q-num"></p>
+    <p class="q-text" id="q-text"></p>
+    <div class="options" id="options"></div>
+    <p class="feedback" id="feedback"></p>
+    <button id="next-btn" onclick="nextQuestion()">Next →</button>
+  </div>
+  <div class="result" id="result">
+    <h2 id="score-text"></h2>
+    <p id="score-msg"></p>
+    <button id="restart-btn" onclick="restart()">Restart Quiz</button>
+  </div>
+</div>
+<script>
+const questions = [
+  { q: "What is the output of print(type([]))?",
+    opts: ["<class 'tuple'>","<class 'list'>","<class 'array'>","<class 'dict'>"], ans: 1 },
+  { q: "Which keyword is used to define a function in Python?",
+    opts: ["func","def","function","lambda"], ans: 1 },
+  { q: "What does len('Hello') return?",
+    opts: ["4","5","6","Error"], ans: 1 },
+  { q: "Which of these is a mutable data type?",
+    opts: ["tuple","string","list","int"], ans: 2 },
+  { q: "What is the correct way to create a dictionary?",
+    opts: ["d = []","d = ()","d = {}","d = <>"], ans: 2 },
+  { q: "What does 2 ** 3 evaluate to?",
+    opts: ["6","8","9","5"], ans: 1 },
+  { q: "Which method adds an item to the end of a list?",
+    opts: ["add()","insert()","append()","extend()"], ans: 2 },
+  { q: "What is the output of bool(0)?",
+    opts: ["True","False","None","Error"], ans: 1 },
+];
+
+let current = 0, score = 0;
+
+function loadQuestion() {
+  const q = questions[current];
+  document.getElementById('q-num').textContent = `Question ${current+1} of ${questions.length}`;
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('next-btn').style.display = 'none';
+  const opts = document.getElementById('options');
+  opts.innerHTML = '';
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.textContent = opt;
+    btn.onclick = () => checkAnswer(i, btn);
+    opts.appendChild(btn);
+  });
+}
+
+function checkAnswer(idx, btn) {
+  const q = questions[current];
+  const btns = document.querySelectorAll('.options button');
+  btns.forEach(b => b.disabled = true);
+  if (idx === q.ans) {
+    btn.classList.add('correct');
+    document.getElementById('feedback').textContent = '✅ Correct!';
+    score++;
+  } else {
+    btn.classList.add('wrong');
+    btns[q.ans].classList.add('correct');
+    document.getElementById('feedback').textContent = '❌ Wrong! See the correct answer above.';
+  }
+  document.getElementById('next-btn').style.display = 'block';
+}
+
+function nextQuestion() {
+  current++;
+  if (current < questions.length) { loadQuestion(); }
+  else {
+    document.getElementById('question-area').style.display = 'none';
+    document.getElementById('result').style.display = 'block';
+    const pct = Math.round(score / questions.length * 100);
+    document.getElementById('score-text').textContent = `${score} / ${questions.length}`;
+    document.getElementById('score-msg').textContent =
+      pct >= 80 ? '🎉 Excellent! You really know Python!' :
+      pct >= 60 ? '👍 Good job! Keep practising.' : '📚 Keep studying — you'll get there!';
+  }
+}
+
+function restart() {
+  current = 0; score = 0;
+  document.getElementById('question-area').style.display = 'block';
+  document.getElementById('result').style.display = 'none';
+  loadQuestion();
+}
+
+loadQuestion();
+</script>
+</body>
+</html>
