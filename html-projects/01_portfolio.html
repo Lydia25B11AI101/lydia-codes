@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lydia's Portfolio</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #fff; }
+    header { background: linear-gradient(135deg, #6e48aa, #9d50bb);
+             text-align: center; padding: 60px 20px; }
+    header h1 { font-size: 2.8rem; margin-bottom: 10px; }
+    header p { font-size: 1.1rem; opacity: 0.85; }
+    .skills { display: flex; flex-wrap: wrap; gap: 12px;
+              justify-content: center; padding: 40px 20px; }
+    .skill-badge { background: #6e48aa; padding: 10px 20px;
+                   border-radius: 25px; font-size: 0.95rem; }
+    .projects { max-width: 900px; margin: 0 auto; padding: 20px; }
+    .card { background: #1e1e2e; border-radius: 12px;
+            padding: 24px; margin-bottom: 20px;
+            border-left: 4px solid #9d50bb; }
+    .card h3 { color: #c084fc; margin-bottom: 8px; }
+    footer { text-align: center; padding: 30px; color: #888; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>👩‍💻 Lydia S. Makiwa</h1>
+    <p>First-Year AIML Student | Python • C • HTML • Data Structures</p>
+  </header>
+
+  <div class="skills">
+    <span class="skill-badge">🐍 Python</span>
+    <span class="skill-badge">⚙️ C Programming</span>
+    <span class="skill-badge">🌐 HTML & CSS</span>
+    <span class="skill-badge">📊 Data Structures</span>
+    <span class="skill-badge">🤖 AIML</span>
+  </div>
+
+  <div class="projects">
+    <h2 style="text-align:center; margin-bottom:24px; color:#c084fc;">My Projects</h2>
+    <div class="card">
+      <h3>📁 lydia-codes</h3>
+      <p>A growing collection of daily Python, C, HTML & DSA programs to build my internship portfolio.</p>
+    </div>
+    <div class="card">
+      <h3>🔢 Data Structures</h3>
+      <p>Implementations of Stack, Linked List, Sorting Algorithms in Python.</p>
+    </div>
+    <div class="card">
+      <h3>🌐 Web Projects</h3>
+      <p>Simple HTML/CSS websites including portfolio and calculator app.</p>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2025 Lydia S. Makiwa · Built with ❤️ for internship applications</p>
+  </footer>
+</body>
+</html>
