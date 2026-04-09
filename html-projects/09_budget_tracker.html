@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- ============================================================
+     Program Title : Student Budget Tracker
+     Author        : Lydia S. Makiwa
+     Date          : 2026-04-09
+     Description   : A personal finance tracker for students.
+                     Add income/expenses, view running balance,
+                     and see a breakdown chart. Uses localStorage.
+     ============================================================ -->
+<head>
+  <meta charset="UTF-8" />
+  <title>Budget Tracker — Lydia S. Makiwa</title>
+  <style>
+    * { box-sizing: border-box; margin:0; padding:0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0d1117; color: #e6edf3;
+      padding: 30px 20px;
+    }
+    h1 { text-align: center; color: #58a6ff; font-size: 2rem; margin-bottom: 4px; }
+    .subtitle { text-align: center; color: #8b949e; margin-bottom: 30px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .balance-card {
+      background: linear-gradient(135deg, #1f6feb, #388bfd);
+      border-radius: 16px; padding: 28px; text-align: center; margin-bottom: 24px;
+    }
+    .balance-label { font-size: 0.9rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; }
+    .balance-amount { font-size: 3rem; font-weight: 700; margin-top: 8px; }
+    .income-expense {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;
+    }
+    .ie-box {
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 12px; padding: 18px; text-align: center;
+    }
+    .ie-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #8b949e; }
+    .ie-value { font-size: 1.8rem; font-weight: 700; margin-top: 6px; }
+    .income-val { color: #3fb950; }
+    .expense-val { color: #f85149; }
+    .form-section {
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 12px; padding: 20px; margin-bottom: 24px;
+    }
+    .form-section h3 { color: #58a6ff; margin-bottom: 16px; }
+    .form-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    input, select {
+      flex: 1; min-width: 120px; padding: 10px 14px;
+      background: #0d1117; color: #e6edf3;
+      border: 1px solid #30363d; border-radius: 8px; font-size: 0.95rem; outline: none;
+    }
+    input:focus, select:focus { border-color: #58a6ff; }
+    .btn-add {
+      padding: 10px 22px; background: #3fb950; color: #0d1117;
+      border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.95rem;
+    }
+    .btn-add:hover { background: #2ea043; }
+    .transactions {
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 12px; padding: 20px; margin-bottom: 24px;
+    }
+    .transactions h3 { color: #58a6ff; margin-bottom: 14px; }
+    .tx-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 14px; border-radius: 8px; margin-bottom: 8px;
+      background: #0d1117; border-left: 4px solid;
+    }
+    .tx-item.income-item { border-color: #3fb950; }
+    .tx-item.expense-item { border-color: #f85149; }
+    .tx-desc { font-size: 0.95rem; }
+    .tx-cat { font-size: 0.75rem; color: #8b949e; margin-top: 2px; }
+    .tx-amount { font-weight: 700; font-size: 1.1rem; }
+    .tx-amount.pos { color: #3fb950; }
+    .tx-amount.neg { color: #f85149; }
+    .tx-del { background: none; border: none; color: #8b949e; cursor: pointer; font-size: 1.1rem; margin-left: 12px; }
+    .tx-del:hover { color: #f85149; }
+    .empty { color: #8b949e; text-align: center; padding: 20px; }
+    .clear-btn {
+      background: #21262d; border: 1px solid #30363d; color: #f85149;
+      padding: 8px 18px; border-radius: 8px; cursor: pointer; float: right; font-size: 0.85rem;
+    }
+    .clear-btn:hover { background: rgba(248,81,73,0.1); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>💰 Budget Tracker</h1>
+  <p class="subtitle">By Lydia S. Makiwa — track your student finances</p>
+
+  <div class="balance-card">
+    <div class="balance-label">Current Balance</div>
+    <div class="balance-amount" id="balance">R 0.00</div>
+  </div>
+
+  <div class="income-expense">
+    <div class="ie-box">
+      <div class="ie-label">Total Income</div>
+      <div class="ie-value income-val" id="totalIncome">R 0.00</div>
+    </div>
+    <div class="ie-box">
+      <div class="ie-label">Total Expenses</div>
+      <div class="ie-value expense-val" id="totalExpenses">R 0.00</div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <h3>Add Transaction</h3>
+    <div class="form-row">
+      <input type="text"   id="desc"     placeholder="Description (e.g. NSFAS allowance)" />
+      <input type="number" id="amount"   placeholder="Amount (R)" min="0" step="0.01" />
+      <select id="type">
+        <option value="income">Income</option>
+        <option value="expense">Expense</option>
+      </select>
+      <select id="category">
+        <option>Allowance</option>
+        <option>Food</option>
+        <option>Transport</option>
+        <option>Textbooks</option>
+        <option>Entertainment</option>
+        <option>Clothing</option>
+        <option>Data/Airtime</option>
+        <option>Other</option>
+      </select>
+      <button class="btn-add" onclick="addTransaction()">Add</button>
+    </div>
+  </div>
+
+  <div class="transactions">
+    <h3>Transactions <button class="clear-btn" onclick="clearAll()">Clear All</button></h3>
+    <div id="txList"></div>
+  </div>
+</div>
+
+<script>
+  let transactions = JSON.parse(localStorage.getItem('lydia_budget') || '[]');
+
+  function fmt(n) { return 'R ' + Math.abs(n).toFixed(2); }
+
+  function render() {
+    const income   = transactions.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0);
+    const expenses = transactions.filter(t => t.type === 'expense').reduce((s,t) => s + t.amount, 0);
+    const balance  = income - expenses;
+
+    document.getElementById('balance').textContent       = 'R ' + balance.toFixed(2);
+    document.getElementById('totalIncome').textContent   = fmt(income);
+    document.getElementById('totalExpenses').textContent = fmt(expenses);
+
+    const list = document.getElementById('txList');
+    if (!transactions.length) {
+      list.innerHTML = '<div class="empty">No transactions yet. Add one above!</div>';
+      return;
+    }
+    list.innerHTML = [...transactions].reverse().map((t, ri) => {
+      const i = transactions.length - 1 - ri;
+      const sign = t.type === 'income' ? '+' : '-';
+      const cls  = t.type === 'income' ? 'pos' : 'neg';
+      const itemCls = t.type === 'income' ? 'income-item' : 'expense-item';
+      return '<div class="tx-item ' + itemCls + '">' +
+        '<div><div class="tx-desc">' + t.desc + '</div>' +
+        '<div class="tx-cat">' + t.category + ' &bull; ' + t.date + '</div></div>' +
+        '<div style="display:flex;align-items:center">' +
+        '<span class="tx-amount ' + cls + '">' + sign + fmt(t.amount) + '</span>' +
+        '<button class="tx-del" onclick="deleteTransaction(' + i + ')">✕</button>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  function addTransaction() {
+    const desc   = document.getElementById('desc').value.trim();
+    const amount = parseFloat(document.getElementById('amount').value);
+    const type   = document.getElementById('type').value;
+    const cat    = document.getElementById('category').value;
+    if (!desc || isNaN(amount) || amount <= 0) { alert('Please enter a valid description and amount.'); return; }
+    transactions.push({ desc, amount, type, category: cat, date: new Date().toLocaleDateString() });
+    localStorage.setItem('lydia_budget', JSON.stringify(transactions));
+    document.getElementById('desc').value   = '';
+    document.getElementById('amount').value = '';
+    render();
+  }
+
+  function deleteTransaction(i) {
+    transactions.splice(i, 1);
+    localStorage.setItem('lydia_budget', JSON.stringify(transactions));
+    render();
+  }
+
+  function clearAll() {
+    if (confirm('Clear all transactions?')) {
+      transactions = [];
+      localStorage.removeItem('lydia_budget');
+      render();
+    }
+  }
+
+  render();
+</script>
+</body>
+</html>
