@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AIML Flashcards</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f0f1a; color: #fff;
+           display: flex; flex-direction: column; align-items: center;
+           min-height: 100vh; padding: 40px 16px; }
+    h1 { color: #c084fc; margin-bottom: 8px; }
+    .sub { color: #888; margin-bottom: 32px; }
+    .card-wrap { perspective: 1000px; width: 380px; height: 220px; cursor: pointer; margin-bottom: 28px; }
+    .card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
+            transition: transform .6s ease; }
+    .card.flipped { transform: rotateY(180deg); }
+    .front, .back {
+      position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+      border-radius: 16px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 28px;
+      text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    }
+    .front { background: linear-gradient(135deg,#1e1e2e,#2d1b69); border: 2px solid #c084fc; }
+    .back  { background: linear-gradient(135deg,#14532d,#1a3a1a); border: 2px solid #4ade80; transform: rotateY(180deg); }
+    .front .label { font-size: .75rem; color: #c084fc; letter-spacing: 2px; margin-bottom: 12px; }
+    .front .term  { font-size: 1.4rem; font-weight: bold; }
+    .back  .label { font-size: .75rem; color: #4ade80; letter-spacing: 2px; margin-bottom: 12px; }
+    .back  .def   { font-size: 1rem; line-height: 1.6; }
+    .controls { display: flex; gap: 16px; align-items: center; }
+    button { padding: 10px 24px; border-radius: 10px; border: none; cursor: pointer;
+             font-size: .95rem; font-weight: bold; }
+    .prev-btn { background: #1e1e2e; color: #c084fc; border: 2px solid #c084fc; }
+    .next-btn { background: #c084fc; color: #0f0f1a; }
+    .count { color: #888; font-size: .9rem; min-width: 80px; text-align: center; }
+    .hint { color: #555; font-size: .8rem; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <h1>🧠 AIML Flashcards</h1>
+  <p class="sub">Click the card to flip it!</p>
+  <div class="card-wrap" onclick="this.querySelector('.card').classList.toggle('flipped')">
+    <div class="card">
+      <div class="front"><span class="label">TERM</span><span class="term" id="term"></span></div>
+      <div class="back"><span class="label">DEFINITION</span><p class="def" id="def"></p></div>
+    </div>
+  </div>
+  <div class="controls">
+    <button class="prev-btn" onclick="move(-1)">← Prev</button>
+    <span class="count" id="count"></span>
+    <button class="next-btn" onclick="move(1)">Next →</button>
+  </div>
+  <p class="hint">Click card to reveal answer</p>
+  <script>
+    const cards = [
+      { term: "Machine Learning", def: "A branch of AI where computers learn from data to make predictions or decisions without being explicitly programmed." },
+      { term: "Neural Network", def: "A computing system inspired by biological neurons, consisting of layers of nodes that process information and learn patterns." },
+      { term: "Supervised Learning", def: "A type of ML where the model is trained on labelled data — each input has a known correct output." },
+      { term: "Unsupervised Learning", def: "ML with unlabelled data. The model finds hidden patterns or groupings on its own (e.g. K-Means clustering)." },
+      { term: "Overfitting", def: "When a model learns the training data too well, including noise, and performs poorly on new unseen data." },
+      { term: "Gradient Descent", def: "An optimisation algorithm that iteratively adjusts model parameters to minimise the loss function." },
+      { term: "Feature Engineering", def: "The process of selecting, transforming, or creating input variables to improve model performance." },
+      { term: "Cross-Validation", def: "A technique to evaluate model performance by splitting data into multiple train/test folds." },
+      { term: "Activation Function", def: "A function applied to each neuron's output to introduce non-linearity (e.g. sigmoid, ReLU, tanh)." },
+      { term: "Confusion Matrix", def: "A table showing True Positives, False Positives, True Negatives, and False Negatives for classification results." },
+    ];
+    let current = 0;
+    function render() {
+      const card = document.querySelector('.card');
+      card.classList.remove('flipped');
+      document.getElementById('term').textContent = cards[current].term;
+      document.getElementById('def').textContent  = cards[current].def;
+      document.getElementById('count').textContent = `${current+1} / ${cards.length}`;
+    }
+    function move(dir) {
+      current = (current + dir + cards.length) % cards.length;
+      render();
+    }
+    render();
+  </script>
+</body>
+</html>
