@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- ============================================================
+     Program Title : Live Weather Dashboard
+     Author        : Lydia S. Makiwa
+     Date          : 2026-04-09
+     Description   : Fetches real-time weather from Open-Meteo
+                     API (no key needed) for any city using
+                     Nominatim geocoding. Built with vanilla JS.
+     ============================================================ -->
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Dashboard — Lydia S. Makiwa</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 40px 20px;
+      color: #fff;
+    }
+    h1 { font-size: 2rem; margin-bottom: 8px; }
+    .subtitle { color: #90caf9; margin-bottom: 32px; font-size: 0.9rem; }
+    .search-bar {
+      display: flex; gap: 10px; margin-bottom: 32px; width: 100%; max-width: 500px;
+    }
+    .search-bar input {
+      flex: 1; padding: 12px 16px; border-radius: 30px; border: none;
+      font-size: 1rem; background: rgba(255,255,255,0.15); color: #fff;
+      outline: none;
+    }
+    .search-bar input::placeholder { color: rgba(255,255,255,0.5); }
+    .search-bar button {
+      padding: 12px 24px; border-radius: 30px; border: none;
+      background: #58a6ff; color: #0d1117; font-weight: 700;
+      cursor: pointer; font-size: 1rem; transition: transform 0.2s;
+    }
+    .search-bar button:hover { transform: scale(1.05); }
+    .card {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px; padding: 32px 40px;
+      text-align: center; max-width: 420px; width: 100%;
+      backdrop-filter: blur(10px);
+      animation: fadeIn 0.5s ease;
+    }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
+    .city-name { font-size: 1.8rem; font-weight: 700; }
+    .weather-icon { font-size: 5rem; margin: 16px 0; }
+    .temp { font-size: 4rem; font-weight: 300; }
+    .feels-like { color: #90caf9; margin-bottom: 20px; }
+    .details {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px; margin-top: 20px;
+    }
+    .detail-box {
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 14px;
+    }
+    .detail-label { font-size: 0.75rem; color: #90caf9; text-transform: uppercase; letter-spacing: 1px; }
+    .detail-value { font-size: 1.2rem; font-weight: 600; margin-top: 4px; }
+    .error { color: #f78166; margin-top: 20px; font-size: 1rem; }
+    .loading { color: #90caf9; margin-top: 20px; }
+    .quick-cities {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; justify-content: center;
+    }
+    .quick-btn {
+      padding: 6px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3);
+      background: transparent; color: #fff; cursor: pointer; font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+    .quick-btn:hover { background: rgba(255,255,255,0.15); }
+  </style>
+</head>
+<body>
+  <h1>🌤 Weather Dashboard</h1>
+  <p class="subtitle">By Lydia S. Makiwa &nbsp;|&nbsp; Powered by Open-Meteo & Nominatim</p>
+
+  <div class="search-bar">
+    <input type="text" id="cityInput" placeholder="Enter city name..." value="Pretoria" />
+    <button onclick="search()">Search</button>
+  </div>
+
+  <div class="quick-cities">
+    <button class="quick-btn" onclick="loadCity('Pretoria')">Pretoria</button>
+    <button class="quick-btn" onclick="loadCity('Johannesburg')">Joburg</button>
+    <button class="quick-btn" onclick="loadCity('Cape Town')">Cape Town</button>
+    <button class="quick-btn" onclick="loadCity('London')">London</button>
+    <button class="quick-btn" onclick="loadCity('New York')">New York</button>
+    <button class="quick-btn" onclick="loadCity('Tokyo')">Tokyo</button>
+  </div>
+
+  <div id="output"></div>
+
+<script>
+  const WMO_ICONS = {
+    0:'☀️', 1:'🌤', 2:'⛅', 3:'☁️',
+    45:'🌫', 48:'🌫',
+    51:'🌦', 53:'🌧', 55:'🌧',
+    61:'🌧', 63:'🌧', 65:'🌧',
+    71:'❄️', 73:'❄️', 75:'❄️',
+    80:'🌦', 81:'🌧', 82:'⛈',
+    95:'⛈', 96:'⛈', 99:'⛈'
+  };
+  const WMO_DESC = {
+    0:'Clear sky', 1:'Mainly clear', 2:'Partly cloudy', 3:'Overcast',
+    45:'Foggy', 48:'Icy fog',
+    51:'Light drizzle', 53:'Drizzle', 55:'Heavy drizzle',
+    61:'Light rain', 63:'Rain', 65:'Heavy rain',
+    71:'Light snow', 73:'Snow', 75:'Heavy snow',
+    80:'Light showers', 81:'Showers', 82:'Heavy showers',
+    95:'Thunderstorm', 96:'Thunderstorm with hail', 99:'Heavy thunderstorm'
+  };
+
+  function getIcon(code) {
+    for (const [k, v] of Object.entries(WMO_ICONS))
+      if (parseInt(k) === code) return v;
+    return '🌡';
+  }
+
+  async function loadCity(city) {
+    document.getElementById('cityInput').value = city;
+    await search();
+  }
+
+  async function search() {
+    const city = document.getElementById('cityInput').value.trim();
+    if (!city) return;
+    const out = document.getElementById('output');
+    out.innerHTML = '<p class="loading">Fetching weather for ' + city + '...</p>';
+
+    try {
+      // Step 1: Geocode city using Nominatim
+      const geoRes = await fetch(
+        'https://nominatim.openstreetmap.org/search?q=' +
+        encodeURIComponent(city) + '&format=json&limit=1',
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const geoData = await geoRes.json();
+      if (!geoData.length) throw new Error('City not found: ' + city);
+      const lat = parseFloat(geoData[0].lat);
+      const lon = parseFloat(geoData[0].lon);
+      const displayName = geoData[0].display_name.split(',')[0];
+
+      // Step 2: Fetch weather
+      const wRes = await fetch(
+        'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
+        '&longitude=' + lon +
+        '&current_weather=true' +
+        '&hourly=relative_humidity_2m,apparent_temperature,precipitation_probability' +
+        '&forecast_days=1'
+      );
+      const wData = await wRes.json();
+      const cw = wData.current_weather;
+      const humidity = wData.hourly.relative_humidity_2m[0];
+      const feelsLike = wData.hourly.apparent_temperature[0];
+      const rain_prob = wData.hourly.precipitation_probability[0];
+      const icon = getIcon(cw.weathercode);
+      const desc = WMO_DESC[cw.weathercode] || 'Unknown';
+
+      out.innerHTML = '<div class="card">' +
+        '<div class="city-name">' + displayName + '</div>' +
+        '<div class="weather-icon">' + icon + '</div>' +
+        '<div class="temp">' + cw.temperature + '°C</div>' +
+        '<div class="feels-like">Feels like ' + feelsLike.toFixed(1) + '°C &nbsp;|&nbsp; ' + desc + '</div>' +
+        '<div class="details">' +
+          '<div class="detail-box"><div class="detail-label">Wind Speed</div><div class="detail-value">' + cw.windspeed + ' km/h</div></div>' +
+          '<div class="detail-box"><div class="detail-label">Humidity</div><div class="detail-value">' + humidity + '%</div></div>' +
+          '<div class="detail-box"><div class="detail-label">Rain Chance</div><div class="detail-value">' + rain_prob + '%</div></div>' +
+          '<div class="detail-box"><div class="detail-label">Coordinates</div><div class="detail-value" style="font-size:0.85rem">' + lat.toFixed(2) + ', ' + lon.toFixed(2) + '</div></div>' +
+        '</div>' +
+        '</div>';
+    } catch (err) {
+      out.innerHTML = '<p class="error">Error: ' + err.message + '</p>';
+    }
+  }
+
+  // Load default city on startup
+  window.onload = () => search();
+
+  // Allow Enter key
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('cityInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') search();
+    });
+  });
+</script>
+</body>
+</html>
