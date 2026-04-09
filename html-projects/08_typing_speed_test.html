@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- ============================================================
+     Program Title : Typing Speed Test App
+     Author        : Lydia S. Makiwa
+     Date          : 2026-04-09
+     Description   : Interactive typing speed test that measures
+                     WPM, accuracy, and time. Highlights errors.
+     ============================================================ -->
+<head>
+  <meta charset="UTF-8" />
+  <title>Typing Speed Test — Lydia S. Makiwa</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0d1117; color: #e6edf3;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 30px;
+    }
+    h1 { font-size: 2.2rem; margin-bottom: 6px; color: #58a6ff; }
+    .subtitle { color: #8b949e; margin-bottom: 30px; font-family: sans-serif; }
+    .stats {
+      display: flex; gap: 24px; margin-bottom: 28px; flex-wrap: wrap; justify-content: center;
+    }
+    .stat-box {
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 12px; padding: 16px 28px; text-align: center; min-width: 110px;
+    }
+    .stat-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #8b949e; font-family: sans-serif; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: #3fb950; margin-top: 4px; }
+    .passage-box {
+      background: #161b22; border: 1px solid #30363d;
+      border-radius: 12px; padding: 24px; max-width: 720px; width: 100%;
+      font-size: 1.2rem; line-height: 2; letter-spacing: 0.5px;
+      margin-bottom: 20px; min-height: 100px;
+    }
+    .passage-box .correct  { color: #3fb950; }
+    .passage-box .wrong    { color: #f85149; text-decoration: underline; background: rgba(248,81,73,0.15); }
+    .passage-box .current  { border-bottom: 2px solid #58a6ff; }
+    .passage-box .pending  { color: #8b949e; }
+    textarea {
+      width: 100%; max-width: 720px; padding: 16px; font-size: 1.1rem;
+      font-family: 'Courier New', monospace;
+      background: #161b22; color: #e6edf3; border: 1px solid #30363d;
+      border-radius: 12px; resize: none; height: 90px; outline: none;
+      transition: border-color 0.3s;
+      margin-bottom: 16px;
+    }
+    textarea:focus { border-color: #58a6ff; }
+    .btn-row { display: flex; gap: 12px; margin-bottom: 20px; }
+    button {
+      padding: 11px 26px; border-radius: 8px; border: none;
+      font-size: 1rem; cursor: pointer; font-weight: 600; transition: transform 0.15s;
+    }
+    button:hover { transform: scale(1.04); }
+    #btnStart { background: #3fb950; color: #0d1117; }
+    #btnReset { background: #30363d; color: #e6edf3; }
+    .result {
+      margin-top: 10px; font-family: sans-serif; font-size: 1rem;
+      color: #58a6ff; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>⌨️ Typing Speed Test</h1>
+  <p class="subtitle">By Lydia S. Makiwa — measure your WPM and accuracy</p>
+
+  <div class="stats">
+    <div class="stat-box"><div class="stat-label">WPM</div><div class="stat-value" id="wpm">0</div></div>
+    <div class="stat-box"><div class="stat-label">Accuracy</div><div class="stat-value" id="acc">100%</div></div>
+    <div class="stat-box"><div class="stat-label">Time</div><div class="stat-value" id="timer">60s</div></div>
+    <div class="stat-box"><div class="stat-label">Errors</div><div class="stat-value" id="errors" style="color:#f85149">0</div></div>
+  </div>
+
+  <div class="passage-box" id="passageBox"></div>
+  <textarea id="inputBox" placeholder="Click 'Start' then type here..." disabled></textarea>
+
+  <div class="btn-row">
+    <button id="btnStart" onclick="startTest()">Start</button>
+    <button id="btnReset" onclick="resetTest()">Reset</button>
+  </div>
+
+  <div class="result" id="result"></div>
+
+<script>
+  const passages = [
+    "The quick brown fox jumps over the lazy dog. Programming is the art of telling another human what one wants the computer to do.",
+    "Python is a high-level programming language known for its readability and simplicity. It is widely used in data science and artificial intelligence.",
+    "Machine learning is a subset of artificial intelligence that gives systems the ability to automatically learn and improve from experience.",
+    "Data structures are a way of organising data so that it can be accessed and modified efficiently. Common ones include stacks, queues, and trees.",
+    "The best way to predict the future is to create it. Every expert was once a beginner. Keep coding and never stop learning."
+  ];
+
+  let currentPassage = '';
+  let timer, timeLeft = 60, started = false, finished = false;
+  let errors = 0, typed = 0;
+
+  function renderPassage(userInput) {
+    let html = '';
+    for (let i = 0; i < currentPassage.length; i++) {
+      if (i < userInput.length) {
+        if (userInput[i] === currentPassage[i])
+          html += '<span class="correct">' + escHtml(currentPassage[i]) + '</span>';
+        else
+          html += '<span class="wrong">' + escHtml(currentPassage[i]) + '</span>';
+      } else if (i === userInput.length) {
+        html += '<span class="current">' + escHtml(currentPassage[i]) + '</span>';
+      } else {
+        html += '<span class="pending">' + escHtml(currentPassage[i]) + '</span>';
+      }
+    }
+    document.getElementById('passageBox').innerHTML = html;
+  }
+
+  function escHtml(c) {
+    return c === '<' ? '&lt;' : c === '>' ? '&gt;' : c === '&' ? '&amp;' : c === ' ' ? '&nbsp;' : c;
+  }
+
+  function updateStats(userInput) {
+    errors = 0;
+    for (let i = 0; i < userInput.length; i++)
+      if (userInput[i] !== currentPassage[i]) errors++;
+    const wordsTyped = userInput.trim().split(/\s+/).filter(Boolean).length;
+    const elapsed = 60 - timeLeft;
+    const wpm = elapsed > 0 ? Math.round((wordsTyped / elapsed) * 60) : 0;
+    const acc = userInput.length > 0
+      ? Math.round(((userInput.length - errors) / userInput.length) * 100)
+      : 100;
+    document.getElementById('wpm').textContent = wpm;
+    document.getElementById('acc').textContent = acc + '%';
+    document.getElementById('errors').textContent = errors;
+  }
+
+  function startTest() {
+    if (started) return;
+    started = true;
+    finished = false;
+    currentPassage = passages[Math.floor(Math.random() * passages.length)];
+    renderPassage('');
+    const inputBox = document.getElementById('inputBox');
+    inputBox.disabled = false;
+    inputBox.value = '';
+    inputBox.focus();
+    document.getElementById('result').textContent = '';
+    timeLeft = 60;
+    document.getElementById('timer').textContent = '60s';
+
+    timer = setInterval(() => {
+      timeLeft--;
+      document.getElementById('timer').textContent = timeLeft + 's';
+      if (timeLeft <= 0) endTest();
+    }, 1000);
+
+    inputBox.oninput = () => {
+      const val = inputBox.value;
+      renderPassage(val);
+      updateStats(val);
+      if (val === currentPassage) endTest(true);
+    };
+  }
+
+  function endTest(completed = false) {
+    clearInterval(timer);
+    finished = true;
+    started = false;
+    document.getElementById('inputBox').disabled = true;
+    const msg = completed
+      ? 'Passage completed! Great job!'
+      : 'Time is up!';
+    const wpm = document.getElementById('wpm').textContent;
+    const acc = document.getElementById('acc').textContent;
+    document.getElementById('result').textContent =
+      msg + ' Final: ' + wpm + ' WPM | ' + acc + ' Accuracy';
+  }
+
+  function resetTest() {
+    clearInterval(timer);
+    started = false;
+    finished = false;
+    currentPassage = '';
+    document.getElementById('passageBox').innerHTML = '<span style="color:#8b949e">Press Start to begin a new test...</span>';
+    document.getElementById('inputBox').value = '';
+    document.getElementById('inputBox').disabled = true;
+    document.getElementById('wpm').textContent = '0';
+    document.getElementById('acc').textContent = '100%';
+    document.getElementById('timer').textContent = '60s';
+    document.getElementById('errors').textContent = '0';
+    document.getElementById('result').textContent = '';
+  }
+
+  resetTest();
+</script>
+</body>
+</html>
