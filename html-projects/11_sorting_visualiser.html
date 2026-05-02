@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<!--
+  Program Title : Interactive Sorting Visualiser
+  Author        : Lydia S. Makiwa
+  Date          : 2026-05-02
+  Description   : Animates Bubble Sort and Selection Sort
+                  on a bar chart — great for DSA learning.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Sorting Visualiser</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;
+         min-height:100vh;padding:24px}
+    h1{text-align:center;font-size:1.8rem;margin-bottom:4px;color:#818cf8}
+    .sub{text-align:center;color:#94a3b8;margin-bottom:20px;font-size:.9rem}
+    .controls{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:24px}
+    button{padding:10px 22px;border:none;border-radius:8px;cursor:pointer;
+           font-size:.9rem;font-weight:600;transition:.2s}
+    #btnBubble{background:#6366f1;color:#fff}
+    #btnSelect{background:#06b6d4;color:#fff}
+    #btnReset {background:#475569;color:#fff}
+    button:hover{opacity:.85}
+    button:disabled{opacity:.4;cursor:not-allowed}
+    #status{text-align:center;color:#fbbf24;font-size:.9rem;margin-bottom:16px;min-height:20px}
+    #canvas-wrap{display:flex;align-items:flex-end;justify-content:center;
+                 gap:4px;height:300px}
+    .bar{border-radius:4px 4px 0 0;transition:height .15s;display:flex;
+         align-items:flex-end;justify-content:center;padding-bottom:4px;
+         font-size:.7rem;color:#fff;font-weight:600}
+  </style>
+</head>
+<body>
+  <h1>📊 Sorting Visualiser</h1>
+  <p class="sub">Watch Bubble Sort & Selection Sort in action</p>
+  <div class="controls">
+    <button id="btnBubble" onclick="startSort('bubble')">▶ Bubble Sort</button>
+    <button id="btnSelect" onclick="startSort('selection')">▶ Selection Sort</button>
+    <button id="btnReset"  onclick="reset()">↺ New Array</button>
+  </div>
+  <div id="status"></div>
+  <div id="canvas-wrap"></div>
+<script>
+let arr=[], steps=[], animIdx=0, timer=null;
+const COLORS = {default:'#6366f1', compare:'#f59e0b', swap:'#ef4444', sorted:'#4ade80'};
+const SPEED  = 120;
+
+function randomArr(n=20){
+  return Array.from({length:n},()=>Math.floor(Math.random()*90)+10);
+}
+
+function reset(){
+  clearInterval(timer);
+  arr=randomArr(); steps=[]; animIdx=0;
+  render(arr.map(()=>'default'));
+  setStatus('');
+  setButtons(false);
+}
+
+function render(colors){
+  const wrap=document.getElementById('canvas-wrap');
+  wrap.innerHTML='';
+  const maxVal=Math.max(...arr);
+  arr.forEach((v,i)=>{
+    const bar=document.createElement('div');
+    bar.className='bar';
+    bar.style.cssText=`height:${(v/maxVal)*280}px;width:28px;background:${COLORS[colors[i]]}`;
+    bar.textContent=v;
+    wrap.appendChild(bar);
+  });
+}
+
+function setStatus(msg){document.getElementById('status').textContent=msg;}
+function setButtons(busy){
+  ['btnBubble','btnSelect'].forEach(id=>document.getElementById(id).disabled=busy);
+}
+
+function generateBubbleSteps(a){
+  const s=[]; const b=[...a]; const done=new Set();
+  for(let i=0;i<b.length-1;i++){
+    for(let j=0;j<b.length-1-i;j++){
+      s.push({type:'compare',i:j,j:j+1,arr:[...b],done:new Set(done)});
+      if(b[j]>b[j+1]){[b[j],b[j+1]]=[b[j+1],b[j]];s.push({type:'swap',i:j,j:j+1,arr:[...b],done:new Set(done)});}
+    }
+    done.add(b.length-1-i);
+  }
+  done.add(0);
+  s.push({type:'done',arr:[...b],done});
+  return s;
+}
+
+function generateSelectionSteps(a){
+  const s=[]; const b=[...a]; const done=new Set();
+  for(let i=0;i<b.length-1;i++){
+    let minIdx=i;
+    for(let j=i+1;j<b.length;j++){
+      s.push({type:'compare',i:minIdx,j,arr:[...b],done:new Set(done)});
+      if(b[j]<b[minIdx]) minIdx=j;
+    }
+    if(minIdx!==i){[b[i],b[minIdx]]=[b[minIdx],b[i]];s.push({type:'swap',i,j:minIdx,arr:[...b],done:new Set(done)});}
+    done.add(i);
+  }
+  done.add(b.length-1);
+  s.push({type:'done',arr:[...b],done});
+  return s;
+}
+
+function animate(){
+  if(animIdx>=steps.length){clearInterval(timer);setButtons(false);return;}
+  const step=steps[animIdx++];
+  arr=[...step.arr];
+  const colors=arr.map((_,k)=>step.done.has(k)?'sorted':'default');
+  if(step.type!=='done'){colors[step.i]=step.type;colors[step.j]=step.type;}
+  render(colors);
+  setStatus(step.type==='done'?'✅ Sorted!':`Step ${animIdx}/${steps.length} — ${step.type}`);
+}
+
+function startSort(algo){
+  clearInterval(timer); animIdx=0;
+  steps = algo==='bubble'?generateBubbleSteps(arr):generateSelectionSteps(arr);
+  setButtons(true);
+  setStatus(`Running ${algo==='bubble'?'Bubble':'Selection'} Sort...`);
+  timer=setInterval(animate,SPEED);
+}
+
+reset();
+</script>
+</body>
+</html>
