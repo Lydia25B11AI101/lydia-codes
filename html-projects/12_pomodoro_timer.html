@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!--
+  Program Title : Pomodoro Focus Timer
+  Author        : Lydia S. Makiwa
+  Date          : 2026-05-02
+  Description   : A Pomodoro productivity timer with work/break
+                  sessions, session counter, and sound alerts.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Pomodoro Timer</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#1a1a2e;min-height:100vh;display:flex;align-items:center;
+         justify-content:center;font-family:'Segoe UI',sans-serif}
+    .card{background:#16213e;border-radius:24px;padding:50px 40px;width:400px;
+          text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+    h1{color:#e94560;font-size:2rem;margin-bottom:6px}
+    .mode-btns{display:flex;gap:8px;justify-content:center;margin:20px 0}
+    .mode-btns button{padding:8px 18px;border:2px solid #0f3460;border-radius:20px;
+                      background:transparent;color:#94a3b8;cursor:pointer;font-size:.85rem;
+                      transition:.2s}
+    .mode-btns button.active{background:#0f3460;color:#fff;border-color:#e94560}
+    .ring{width:220px;height:220px;margin:0 auto 24px;position:relative}
+    svg{transform:rotate(-90deg)}
+    .bg-circle{fill:none;stroke:#0f3460;stroke-width:10}
+    .progress{fill:none;stroke:#e94560;stroke-width:10;stroke-linecap:round;
+              stroke-dasharray:628;stroke-dashoffset:628;transition:stroke-dashoffset .5s}
+    .time{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+          font-size:3.2rem;font-weight:700;color:#e2e8f0}
+    .phase{color:#94a3b8;font-size:.9rem;margin-bottom:6px}
+    .controls{display:flex;gap:14px;justify-content:center;margin-bottom:24px}
+    .controls button{padding:12px 28px;border:none;border-radius:12px;
+                     font-size:.95rem;font-weight:600;cursor:pointer;transition:.2s}
+    #btnStart{background:#e94560;color:#fff}
+    #btnReset{background:#0f3460;color:#94a3b8}
+    .sessions{color:#64748b;font-size:.85rem}
+    .sessions span{color:#e94560;font-weight:700;font-size:1.1rem}
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🍅 Pomodoro</h1>
+  <div class="mode-btns">
+    <button class="active" onclick="setMode('work')">Work</button>
+    <button onclick="setMode('short')">Short Break</button>
+    <button onclick="setMode('long')">Long Break</button>
+  </div>
+  <div class="ring">
+    <svg width="220" height="220" viewBox="0 0 220 220">
+      <circle class="bg-circle" cx="110" cy="110" r="100"/>
+      <circle class="progress" id="ring" cx="110" cy="110" r="100"/>
+    </svg>
+    <div class="time" id="time">25:00</div>
+  </div>
+  <div class="phase" id="phase">Focus Time 🎯</div>
+  <div class="controls">
+    <button id="btnStart" onclick="toggle()">▶ Start</button>
+    <button id="btnReset" onclick="reset()">↺ Reset</button>
+  </div>
+  <div class="sessions">Sessions completed: <span id="sess">0</span></div>
+</div>
+<script>
+const MODES={work:{min:25,label:'Focus Time 🎯'},
+             short:{min:5,label:'Short Break ☕'},
+             long:{min:15,label:'Long Break 🛌'}};
+let mode='work',total=0,remaining=0,running=false,timer=null,sessions=0;
+
+function setMode(m){
+  clearInterval(timer);running=false;mode=m;
+  document.querySelectorAll('.mode-btns button').forEach((b,i)=>{
+    b.classList.toggle('active',['work','short','long'][i]===m);
+  });
+  reset();
+}
+
+function reset(){
+  clearInterval(timer);running=false;
+  total=remaining=MODES[mode].min*60;
+  document.getElementById('btnStart').textContent='▶ Start';
+  document.getElementById('phase').textContent=MODES[mode].label;
+  render();
+}
+
+function toggle(){
+  if(running){clearInterval(timer);running=false;document.getElementById('btnStart').textContent='▶ Resume';}
+  else{running=true;document.getElementById('btnStart').textContent='⏸ Pause';
+       timer=setInterval(tick,1000);}
+}
+
+function tick(){
+  if(remaining<=0){
+    clearInterval(timer);running=false;
+    if(mode==='work'){sessions++;document.getElementById('sess').textContent=sessions;}
+    beep();
+    document.getElementById('phase').textContent='✅ Done! Choose next mode.';
+    document.getElementById('btnStart').textContent='▶ Start';
+    return;
+  }
+  remaining--;
+  render();
+}
+
+function render(){
+  const m=Math.floor(remaining/60),s=remaining%60;
+  document.getElementById('time').textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const frac=(total-remaining)/total;
+  document.getElementById('ring').style.strokeDashoffset=628-(628*frac);
+}
+
+function beep(){
+  const ctx=new (window.AudioContext||window.webkitAudioContext)();
+  const osc=ctx.createOscillator();
+  osc.connect(ctx.destination);
+  osc.frequency.value=880;
+  osc.start();osc.stop(ctx.currentTime+0.3);
+}
+
+reset();
+</script>
+</body>
+</html>
