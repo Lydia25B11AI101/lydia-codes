@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<!-- ============================================================
+  Project Title : Memory Card Flip Game
+  Author        : Lydia S. Makiwa
+  Date          : 2026-05-04
+  Description   : 4x4 emoji memory matching game.
+  ============================================================ -->
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<title>Memory Game - Lydia Codes</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:#1a1a2e; font-family:'Segoe UI',sans-serif;
+       display:flex; flex-direction:column; align-items:center;
+       justify-content:center; min-height:100vh; color:#eee; }
+h1 { margin-bottom:8px; font-size:2rem; color:#e94560; }
+#info { margin-bottom:16px; font-size:1rem; color:#a8dadc; }
+#board { display:grid; grid-template-columns:repeat(4,90px); gap:10px; }
+.card { width:90px; height:90px; perspective:600px; cursor:pointer; }
+.inner { width:100%; height:100%; position:relative;
+         transform-style:preserve-3d; transition:.5s; }
+.card.flipped .inner { transform:rotateY(180deg); }
+.front,.back { position:absolute; width:100%; height:100%;
+               backface-visibility:hidden; border-radius:12px;
+               display:flex; align-items:center; justify-content:center;
+               font-size:2.4rem; }
+.back  { background:#16213e; border:2px solid #e94560; color:#e94560; }
+.front { background:#0f3460; transform:rotateY(180deg); }
+.card.matched .inner { animation:pulse .4s ease; }
+@keyframes pulse {
+  0%,100% { transform:rotateY(180deg) scale(1); }
+  50%      { transform:rotateY(180deg) scale(1.15); }
+}
+#result { margin-top:20px; font-size:1.2rem; color:#06d6a0; height:30px; }
+button { margin-top:12px; padding:10px 30px; background:#e94560;
+         border:none; border-radius:8px; color:#fff; font-size:1rem;
+         cursor:pointer; transition:.2s; }
+button:hover { background:#c7263f; }
+</style>
+</head>
+<body>
+<h1>🧠 Memory Game</h1>
+<div id='info'>Moves: <span id='moves'>0</span> &nbsp;|&nbsp; Matches: <span id='matches'>0</span>/8</div>
+<div id='board'></div>
+<div id='result'></div>
+<button onclick='startGame()'>🔄 New Game</button>
+<script>
+const EMOJIS=['\U0001F600','\U0001F602','\U0001F60D','\U0001F92F',
+              '\U0001F525','\U0001F3AE','\U0001F4A1','\U0001F680'];
+let flipped=[],matched=0,moves=0,locked=false;
+function shuffle(a){return a.sort(()=>Math.random()-.5);}
+function startGame(){
+  matched=0;moves=0;flipped=[];locked=false;
+  document.getElementById('moves').textContent=0;
+  document.getElementById('matches').textContent=0;
+  document.getElementById('result').textContent='';
+  const cards=shuffle([...EMOJIS,...EMOJIS]);
+  const board=document.getElementById('board');
+  board.innerHTML='';
+  cards.forEach((emoji)=>{
+    const card=document.createElement('div');
+    card.className='card';
+    card.dataset.emoji=emoji;
+    card.innerHTML='<div class="inner"><div class="back">?</div><div class="front">'+emoji+'</div></div>';
+    card.addEventListener('click',()=>flipCard(card));
+    board.appendChild(card);
+  });
+}
+function flipCard(card){
+  if(locked||card.classList.contains('flipped')||card.classList.contains('matched'))return;
+  card.classList.add('flipped');
+  flipped.push(card);
+  if(flipped.length===2){
+    locked=true;moves++;
+    document.getElementById('moves').textContent=moves;
+    const[a,b]=flipped;
+    if(a.dataset.emoji===b.dataset.emoji){
+      a.classList.add('matched');b.classList.add('matched');
+      matched++;document.getElementById('matches').textContent=matched;
+      if(matched===8)document.getElementById('result').textContent='🎉 You won in '+moves+' moves!';
+      flipped=[];locked=false;
+    }else{
+      setTimeout(()=>{a.classList.remove('flipped');b.classList.remove('flipped');flipped=[];locked=false;},900);
+    }
+  }
+}
+startGame();
+</script>
+</body>
+</html>
