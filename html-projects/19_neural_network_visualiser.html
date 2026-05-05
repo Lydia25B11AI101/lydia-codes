@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<!-- Program Title: Neural Network Visualiser (Interactive)
+     Author: Lydia S. Makiwa
+     Date: 2026-05-05
+     Description: An interactive animated neural network diagram built with
+                  HTML5 Canvas. Shows forward pass, highlights active neurons,
+                  and lets you change the architecture live. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Neural Network Visualiser</title>
+<style>
+  body{ margin:0; background:#0a0a14; color:#e8e8f0; font-family:'Segoe UI',sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px; }
+  h1{ background:linear-gradient(90deg,#6C63FF,#a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-size:1.5rem; }
+  p.sub{ color:#888; font-size:.83rem; margin-bottom:16px; }
+  canvas{ border-radius:14px; background:#13131f; }
+  .controls{ margin-top:16px; display:flex; gap:16px; flex-wrap:wrap; justify-content:center; }
+  label{ color:#aaa; font-size:.83rem; }
+  input[type=range]{ accent-color:#6C63FF; width:100px; }
+  button{ padding:9px 22px; border:none; border-radius:20px; background:#6C63FF; color:#fff; cursor:pointer; font-size:.88rem; }
+  button:hover{ background:#5a52e0; }
+  #info{ margin-top:12px; color:#aaa; font-size:.82rem; text-align:center; max-width:600px; }
+</style>
+</head>
+<body>
+<h1>🧠 Neural Network Visualiser</h1>
+<p class="sub">Interactive architecture explorer | Author: Lydia S. Makiwa</p>
+<canvas id="c" width="640" height="380"></canvas>
+
+<div class="controls">
+  <label>Hidden Layers: <input type="range" id="layers" min="1" max="4" value="2" oninput="redraw()"><span id="lv">2</span></label>
+  <label>Neurons/Layer: <input type="range" id="neurons" min="2" max="8" value="4" oninput="redraw()"><span id="nv">4</span></label>
+  <button onclick="forwardPass()">▶ Forward Pass</button>
+  <button onclick="reset()">↺ Reset</button>
+</div>
+<div id="info">Architecture: <span id="arch"></span></div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+let activations = null;
+
+function getArch() {
+  const h = +document.getElementById('layers').value;
+  const n = +document.getElementById('neurons').value;
+  document.getElementById('lv').textContent = h;
+  document.getElementById('nv').textContent = n;
+  return [3, ...Array(h).fill(n), 2];  // input=3, output=2
+}
+
+function drawNet(arch, active) {
+  ctx.clearRect(0,0,W,H);
+  const layerCount = arch.length;
+  const xStep = W / (layerCount + 1);
+  const positions = [];
+  const colors = ['#6C63FF','#a855f7','#10b981','#f59e0b','#f43f5e','#06b6d4'];
+  const layerNames = ['Input', ...Array(arch.length-2).fill('Hidden'), 'Output'];
+
+  // Compute node positions
+  arch.forEach((n, li) => {
+    const x = xStep * (li + 1);
+    const yStep = H / (n + 1);
+    const layerPos = [];
+    for (let ni = 0; ni < n; ni++) {
+      layerPos.push({x, y: yStep * (ni + 1)});
+    }
+    positions.push(layerPos);
+  });
+
+  // Draw connections
+  for (let li = 0; li < positions.length - 1; li++) {
+    for (const {x:x1, y:y1} of positions[li]) {
+      for (const {x:x2, y:y2} of positions[li+1]) {
+        const w = (active && active[li] && active[li+1]) ? 0.6 : 0.12;
+        ctx.strokeStyle = `rgba(108,99,255,${w})`;
+        ctx.lineWidth = 0.7;
+        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      }
+    }
+  }
+
+  // Draw nodes
+  positions.forEach((layer, li) => {
+    layer.forEach(({x, y}, ni) => {
+      const isActive = active && active[li] && active[li][ni] > 0.5;
+      const r  = li===0||li===arch.length-1 ? 16 : 14;
+      const col = colors[li % colors.length];
+      const grd = ctx.createRadialGradient(x,y,0,x,y,r);
+      grd.addColorStop(0, isActive ? '#fff' : col);
+      grd.addColorStop(1, isActive ? col   : col + '44');
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle = grd; ctx.fill();
+      if (isActive) {
+        ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+        ctx.stroke();
+      }
+      // Value label
+      if (active && active[li]) {
+        ctx.fillStyle='#fff'; ctx.font='bold 9px Segoe UI'; ctx.textAlign='center';
+        ctx.fillText(active[li][ni].toFixed(2), x, y+3);
+      }
+    });
+    // Layer label
+    ctx.fillStyle='#666'; ctx.font='11px Segoe UI'; ctx.textAlign='center';
+    ctx.fillText(layerNames[li]||'Hidden', positions[li][0].x, H-8);
+  });
+}
+
+function sigmoid(x){ return 1/(1+Math.exp(-x)); }
+
+function forwardPass() {
+  const arch = getArch();
+  const activ = [arch[0]].map(()=>null);
+  // Random input activations
+  let layer = arch.map((_,i)=>i===0 ? Array.from({length:arch[0]},()=>Math.random()) : []);
+  const allLayers = [layer[0]];
+  for (let l = 1; l < arch.length; l++) {
+    const prev = allLayers[l-1];
+    const curr = [];
+    for (let n = 0; n < arch[l]; n++) {
+      const z = prev.reduce((s,a)=>s + a*(Math.random()*2-1), 0);
+      curr.push(sigmoid(z));
+    }
+    allLayers.push(curr);
+  }
+  drawNet(arch, allLayers);
+  document.getElementById('arch').textContent = arch.join(' → ') + '  |  params ≈ ' +
+    arch.slice(0,-1).reduce((s,n,i)=>s+(n+1)*arch[i+1],0);
+}
+
+function redraw(){ drawNet(getArch(), null); forwardPass(); }
+function reset(){ activations=null; drawNet(getArch(), null); }
+
+drawNet(getArch(), null);
+document.getElementById('arch').textContent = getArch().join(' → ');
+</script>
+</body>
+</html>
