@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML5 Canvas Image Editor</title>
+    <!--
+      Program Title: HTML5 Canvas Image Editor
+      Author: Lydia S. Makiwa
+      Date: June 2, 2026
+
+      Description:
+      A dynamic client-side image editing application. It lets users upload images
+      and manipulate pixel color data inside an HTML5 Canvas to apply custom mathematical
+      filters like grayscale, inversion, brightness boost, and thresholding.
+    -->
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        header {
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        header h1 {
+            color: #3498db;
+            margin-bottom: 5px;
+        }
+        header p {
+            color: #bdc3c7;
+        }
+        .editor-container {
+            display: flex;
+            gap: 30px;
+            background: #34495e;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            max-width: 1000px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+        .canvas-area {
+            flex: 1;
+            min-width: 350px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed #7f8c8d;
+            border-radius: 8px;
+            padding: 15px;
+            background: #2c3e50;
+            min-height: 400px;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 450px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            display: none;
+        }
+        .placeholder {
+            text-align: center;
+            color: #95a5a6;
+        }
+        .controls-area {
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .control-group {
+            background: #2c3e50;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .control-group h3 {
+            font-size: 1rem;
+            margin-bottom: 12px;
+            color: #3498db;
+            border-bottom: 1px solid #7f8c8d;
+            padding-bottom: 5px;
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            transition: background 0.2s;
+            text-align: center;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        .btn-success {
+            background-color: #2ecc71;
+        }
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .slider-control {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .slider-control label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+        .slider-control input {
+            width: 100%;
+        }
+        #file-input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Canvas Pixel Image Editor</h1>
+        <p>Apply digital image processing matrices and adjustments in real-time.</p>
+    </header>
+
+    <div class="editor-container">
+        <!-- Canvas Section -->
+        <div class="canvas-area" id="drop-zone">
+            <div class="placeholder" id="placeholder-text">
+                <p>Drag & Drop an Image here or Click to upload</p>
+                <p style="font-size: 0.8rem; margin-top: 10px; color: #7f8c8d;">Supports JPEG, PNG</p>
+            </div>
+            <canvas id="editor-canvas"></canvas>
+        </div>
+
+        <!-- Controls Section -->
+        <div class="controls-area">
+            <div class="control-group">
+                <h3>1. Source Image</h3>
+                <button class="btn" onclick="document.getElementById('file-input').click()">Upload Image</button>
+                <input type="file" id="file-input" accept="image/*">
+            </div>
+
+            <div class="control-group">
+                <h3>2. Digital Filters</h3>
+                <div class="filter-grid">
+                    <button class="btn" onclick="applyFilter('grayscale')">Grayscale</button>
+                    <button class="btn" onclick="applyFilter('invert')">Invert</button>
+                    <button class="btn" onclick="applyFilter('threshold')">Binarize</button>
+                    <button class="btn" onclick="applyFilter('reset')">Reset</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>3. Brightness</h3>
+                <div class="slider-control">
+                    <label><span>Exposure Offset</span><span id="brightness-val">0</span></label>
+                    <input type="range" id="brightness-slider" min="-100" max="100" value="0">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>4. Save Output</h3>
+                <button class="btn btn-success" onclick="downloadImage()">Export Processed Image</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('editor-canvas');
+        const ctx = canvas.getContext('2d');
+        const fileInput = document.getElementById('file-input');
+        const placeholder = document.getElementById('placeholder-text');
+        const brightnessSlider = document.getElementById('brightness-slider');
+        const brightnessVal = document.getElementById('brightness-val');
+        const dropZone = document.getElementById('drop-zone');
+
+        let originalImageData = null;
+        let loadedImage = null;
+
+        // File loading event handlers
+        fileInput.addEventListener('change', handleFile);
+        
+        dropZone.addEventListener('click', () => {
+            if(!loadedImage) fileInput.click();
+        });
+
+        // Drag and Drop
+        dropZone.addEventListener('dragover', e => e.preventDefault());
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            const files = e.dataTransfer.files;
+            if(files.length) {
+                fileInput.files = files;
+                handleFile();
+            }
+        });
+
+        brightnessSlider.addEventListener('input', e => {
+            brightnessVal.innerText = e.target.value;
+            applyAdjustments();
+        });
+
+        function handleFile() {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                loadedImage = new Image();
+                loadedImage.onload = function() {
+                    // Set canvas bounds matching image dimensions
+                    canvas.width = loadedImage.width;
+                    canvas.height = loadedImage.height;
+                    ctx.drawImage(loadedImage, 0, 0);
+                    
+                    originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    placeholder.style.display = 'none';
+                    canvas.style.display = 'block';
+                    brightnessSlider.value = 0;
+                    brightnessVal.innerText = "0";
+                };
+                loadedImage.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function applyFilter(type) {
+            if (!originalImageData) return;
+            
+            const tempCanvasData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = tempCanvasData.data;
+
+            if (type === 'reset') {
+                ctx.putImageData(originalImageData, 0, 0);
+                brightnessSlider.value = 0;
+                brightnessVal.innerText = "0";
+                return;
+            }
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i+1];
+                const b = data[i+2];
+
+                if (type === 'grayscale') {
+                    const avg = 0.299 * r + 0.587 * g + 0.114 * b;
+                    data[i] = avg;     // Red
+                    data[i+1] = avg;   // Green
+                    data[i+2] = avg;   // Blue
+                } else if (type === 'invert') {
+                    data[i] = 255 - r;
+                    data[i+1] = 255 - g;
+                    data[i+2] = 255 - b;
+                } else if (type === 'threshold') {
+                    const avg = (r + g + b) / 3;
+                    const binarized = avg >= 128 ? 255 : 0;
+                    data[i] = binarized;
+                    data[i+1] = binarized;
+                    data[i+2] = binarized;
+                }
+            }
+            ctx.putImageData(tempCanvasData, 0, 0);
+        }
+
+        function applyAdjustments() {
+            if (!originalImageData) return;
+
+            const tempCanvasData = ctx.createImageData(originalImageData.width, originalImageData.height);
+            const src = originalImageData.data;
+            const dest = tempCanvasData.data;
+            const offset = parseInt(brightnessSlider.value);
+
+            for (let i = 0; i < src.length; i += 4) {
+                dest[i] = Math.min(255, Math.max(0, src[i] + offset));     // R
+                dest[i+1] = Math.min(255, Math.max(0, src[i+1] + offset)); // G
+                dest[i+2] = Math.min(255, Math.max(0, src[i+2] + offset)); // B
+                dest[i+3] = src[i+3]; // Alpha channel untouched
+            }
+            ctx.putImageData(tempCanvasData, 0, 0);
+        }
+
+        function downloadImage() {
+            if(!originalImageData) return;
+            const link = document.createElement('a');
+            link.download = 'processed-canvas-output.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>
