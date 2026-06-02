@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Kanban Board</title>
+    <!--
+      Program Title: Interactive Kanban Board
+      Author: Lydia S. Makiwa
+      Date: June 2, 2026
+
+      Description:
+      An interactive Kanban Board with Drag and Drop capabilities, task categorization,
+      and LocalStorage integration to save status. Fully responsive.
+    -->
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f4f6f8;
+            color: #333;
+            padding: 20px;
+        }
+        header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        header h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        header p {
+            color: #7f8c8d;
+            font-size: 0.95rem;
+        }
+        .board {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .column {
+            background-color: #ebecf0;
+            border-radius: 8px;
+            width: 320px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .column-header {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .column-count {
+            background-color: #bdc3c7;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        .task-list {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 100px;
+        }
+        .task-card {
+            background-color: white;
+            padding: 12px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        .task-card:active {
+            cursor: grabbing;
+        }
+        .task-card.dragging {
+            opacity: 0.5;
+        }
+        .task-card h4 {
+            color: #2c3e50;
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+        }
+        .task-card p {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            line-height: 1.3;
+        }
+        .task-card .delete-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .task-card:hover .delete-btn {
+            opacity: 1;
+        }
+        .add-task-form {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .add-task-form input, .add-task-form textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .add-task-form button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: background-color 0.2s;
+        }
+        .add-task-form button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Lydia's Kanban Board</h1>
+        <p>A native HTML5 Drag and Drop Kanban Board for workflow tracking.</p>
+    </header>
+
+    <div class="board">
+        <!-- Backlog -->
+        <div class="column" id="backlog">
+            <div class="column-header">
+                <span>Backlog</span>
+                <span class="column-count" id="count-backlog">0</span>
+            </div>
+            <div class="task-list" data-column="backlog"></div>
+            <div class="add-task-form">
+                <input type="text" placeholder="Task Title..." id="title-backlog">
+                <textarea placeholder="Description..." id="desc-backlog" rows="2"></textarea>
+                <button onclick="addTask('backlog')">Add Task</button>
+            </div>
+        </div>
+
+        <!-- In Progress -->
+        <div class="column" id="progress">
+            <div class="column-header">
+                <span>In Progress</span>
+                <span class="column-count" id="count-progress">0</span>
+            </div>
+            <div class="task-list" data-column="progress"></div>
+            <div class="add-task-form">
+                <input type="text" placeholder="Task Title..." id="title-progress">
+                <textarea placeholder="Description..." id="desc-progress" rows="2"></textarea>
+                <button onclick="addTask('progress')">Add Task</button>
+            </div>
+        </div>
+
+        <!-- Completed -->
+        <div class="column" id="completed">
+            <div class="column-header">
+                <span>Completed</span>
+                <span class="column-count" id="count-completed">0</span>
+            </div>
+            <div class="task-list" data-column="completed"></div>
+            <div class="add-task-form">
+                <input type="text" placeholder="Task Title..." id="title-completed">
+                <textarea placeholder="Description..." id="desc-completed" rows="2"></textarea>
+                <button onclick="addTask('completed')">Add Task</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Storage configuration
+        let tasks = JSON.parse(localStorage.getItem('kanban-tasks')) || [
+            { id: 1, title: 'Learn React Hooks', desc: 'Read React documentation regarding useEffect and custom hooks.', status: 'backlog' },
+            { id: 2, title: 'Implement Banker\'s Algorithm', desc: 'Code Operating Systems deadlock prevention algorithm in C.', status: 'progress' },
+            { id: 3, title: 'Setup GitHub Repo', desc: 'Initialize and organize files in lydia-codes repository.', status: 'completed' }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderBoard();
+            setupDragAndDrop();
+        });
+
+        function renderBoard() {
+            // Clear existing lists
+            document.querySelectorAll('.task-list').forEach(list => list.innerHTML = '');
+
+            // Group tasks by category
+            tasks.forEach(task => {
+                const list = document.querySelector(`.task-list[data-column="\${task.status}"]`);
+                if (list) {
+                    const card = createTaskCard(task);
+                    list.appendChild(card);
+                }
+            });
+
+            // Update column counts
+            updateCounts();
+            localStorage.setItem('kanban-tasks', JSON.stringify(tasks));
+        }
+
+        function createTaskCard(task) {
+            const card = document.createElement('div');
+            card.className = 'task-card';
+            card.draggable = true;
+            card.dataset.id = task.id;
+            card.innerHTML = `
+                <button class="delete-btn" onclick="deleteTask(\${task.id})">×</button>
+                <h4>\${escapeHTML(task.title)}</h4>
+                <p>\${escapeHTML(task.desc)}</p>
+            `;
+            return card;
+        }
+
+        function updateCounts() {
+            ['backlog', 'progress', 'completed'].forEach(col => {
+                const count = tasks.filter(t => t.status === col).length;
+                document.getElementById(`count-\${col}`).innerText = count;
+            });
+        }
+
+        function addTask(column) {
+            const titleInput = document.getElementById(`title-\${column}`);
+            const descInput = document.getElementById(`desc-\${column}`);
+
+            if (!titleInput.value.trim()) return;
+
+            const newTask = {
+                id: Date.now(),
+                title: titleInput.value,
+                desc: descInput.value,
+                status: column
+            };
+
+            tasks.push(newTask);
+            titleInput.value = '';
+            descInput.value = '';
+
+            renderBoard();
+            setupDragAndDrop();
+        }
+
+        function deleteTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            renderBoard();
+            setupDragAndDrop();
+        }
+
+        function setupDragAndDrop() {
+            const cards = document.querySelectorAll('.task-card');
+            const lists = document.querySelectorAll('.task-list');
+
+            cards.forEach(card => {
+                card.addEventListener('dragstart', () => {
+                    card.classList.add('dragging');
+                });
+
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging');
+                });
+            });
+
+            lists.forEach(list => {
+                list.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    const afterElement = getDragAfterElement(list, e.clientY);
+                    const draggingCard = document.querySelector('.dragging');
+                    if (afterElement == null) {
+                        list.appendChild(draggingCard);
+                    } else {
+                        list.insertBefore(draggingCard, afterElement);
+                    }
+                });
+
+                list.addEventListener('drop', e => {
+                    const draggingCard = document.querySelector('.dragging');
+                    if (draggingCard) {
+                        const taskId = parseInt(draggingCard.dataset.id);
+                        const newStatus = list.dataset.column;
+                        
+                        // Update status in data array
+                        const task = tasks.find(t => t.id === taskId);
+                        if (task) {
+                            task.status = newStatus;
+                            localStorage.setItem('kanban-tasks', JSON.stringify(tasks));
+                            updateCounts();
+                        }
+                    }
+                });
+            });
+        }
+
+        function getDragAfterElement(list, y) {
+            const draggableElements = [...list.querySelectorAll('.task-card:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+    </script>
+</body>
+</html>
