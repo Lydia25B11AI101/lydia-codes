@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gradient Descent Visualizer</title>
+    <!-- Tailwind CSS Pinned CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Modern styling to fit with the visual design guidelines */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+    <!-- Header Block -->
+    <header class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4 shadow-sm">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+                    📉 Gradient Descent Visualizer
+                </h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Author: Lydia S. Makiwa | Date: June 3, 2026 | AIML Learning Lab
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="theme-toggle" class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-sm transition-all duration-150">
+                    🌓 Toggle Theme
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="max-w-6xl mx-auto p-4 md:p-6 flex-grow w-full grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Control Panel Card -->
+        <section class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm flex flex-col gap-5">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white border-b pb-2 border-slate-100 dark:border-slate-800">
+                Simulation Controls
+            </h2>
+            
+            <!-- Select Function -->
+            <div class="flex flex-col gap-1.5">
+                <label for="function-select" class="text-sm font-medium">Objective Function f(x)</label>
+                <select id="function-select" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="quadratic">Quadratic: f(x) = x² (Convex)</option>
+                    <option value="sinusoidal">Sinusoidal: f(x) = x² + 2·sin(3x)</option>
+                    <option value="multi-modal">Multi-modal: f(x) = x⁴ - 4x² + x</option>
+                </select>
+            </div>
+
+            <!-- Learning Rate Slider -->
+            <div class="flex flex-col gap-1.5">
+                <div class="flex justify-between items-center">
+                    <label for="lr-slider" class="text-sm font-medium">Learning Rate (α)</label>
+                    <span id="lr-val" class="text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded font-mono font-bold">0.1</span>
+                </div>
+                <input id="lr-slider" type="range" min="0.01" max="1.0" step="0.01" value="0.1" class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                <span class="text-[10px] text-slate-400">Higher learning rate can lead to overshoot or divergence!</span>
+            </div>
+
+            <!-- Starting X Slider -->
+            <div class="flex flex-col gap-1.5">
+                <div class="flex justify-between items-center">
+                    <label for="x0-slider" class="text-sm font-medium">Starting Point (x₀)</label>
+                    <span id="x0-val" class="text-xs bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded font-mono font-bold">-2.0</span>
+                </div>
+                <input id="x0-slider" type="range" min="-3.0" max="3.0" step="0.1" value="-2.0" class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+            </div>
+
+            <!-- Playback Buttons -->
+            <div class="grid grid-cols-2 gap-2 mt-2">
+                <button id="step-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-3 rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-1">
+                    ➡️ Step Once
+                </button>
+                <button id="auto-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-1">
+                    ▶️ Auto Run
+                </button>
+            </div>
+
+            <button id="reset-btn" class="w-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs py-2 rounded-lg transition-all font-medium">
+                🔄 Reset Simulation
+            </button>
+        </section>
+
+        <!-- Canvas and Chart area -->
+        <section class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-sm col-span-1 md:col-span-2 flex flex-col gap-4">
+            <h2 class="text-lg font-semibold text-slate-900 dark:text-white border-b pb-2 border-slate-100 dark:border-slate-800">
+                Convergence Plot
+            </h2>
+            <div class="relative w-full aspect-[4/3] max-h-[400px] border border-slate-100 dark:border-slate-800 rounded-lg overflow-hidden bg-slate-900">
+                <canvas id="viz-canvas" class="w-full h-full block"></canvas>
+            </div>
+            <!-- Statistics Panel -->
+            <div class="grid grid-cols-3 gap-2.5 text-center mt-2">
+                <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5">
+                    <div class="text-[10px] text-slate-400 uppercase font-semibold">Iteration</div>
+                    <div id="stat-iter" class="text-lg font-bold text-indigo-600 dark:text-indigo-400 font-mono">0</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5">
+                    <div class="text-[10px] text-slate-400 uppercase font-semibold">Current x</div>
+                    <div id="stat-x" class="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">-2.0000</div>
+                </div>
+                <div class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5">
+                    <div class="text-[10px] text-slate-400 uppercase font-semibold">Loss f(x)</div>
+                    <div id="stat-loss" class="text-lg font-bold text-rose-500 font-mono">4.0000</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center p-4 text-xs text-slate-400 border-t border-slate-200 dark:border-slate-800 mt-6 bg-white dark:bg-slate-950">
+        Created for first-year Artificial Intelligence & Machine Learning (AIML) education.
+    </footer>
+
+    <!-- Script for Visualization -->
+    <script>
+        // Setup state variables
+        let state = {
+            functionType: 'quadratic',
+            lr: 0.1,
+            x: -2.0,
+            y: 4.0,
+            iterations: 0,
+            path: [],
+            isPlaying: false,
+            intervalId: null
+        };
+
+        const canvas = document.getElementById('viz-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Functions and their derivatives
+        const functions = {
+            quadratic: {
+                f: (x) => x * x,
+                df: (x) => 2 * x,
+                range: { xmin: -3, xmax: 3, ymin: -1, ymax: 10 }
+            },
+            sinusoidal: {
+                f: (x) => x * x + 2 * Math.sin(3 * x),
+                df: (x) => 2 * x + 6 * Math.cos(3 * x),
+                range: { xmin: -3, xmax: 3, ymin: -3, ymax: 11 }
+            },
+            'multi-modal': {
+                f: (x) => Math.pow(x, 4) - 4 * x * x + x + 2,
+                df: (x) => 4 * Math.pow(x, 3) - 8 * x + 1,
+                range: { xmin: -2.5, xmax: 2.5, ymin: -5, ymax: 12 }
+            }
+        };
+
+        // UI Element references
+        const lrSlider = document.getElementById('lr-slider');
+        const lrVal = document.getElementById('lr-val');
+        const x0Slider = document.getElementById('x0-slider');
+        const x0Val = document.getElementById('x0-val');
+        const funcSelect = document.getElementById('function-select');
+        const stepBtn = document.getElementById('step-btn');
+        const autoBtn = document.getElementById('auto-btn');
+        const resetBtn = document.getElementById('reset-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        const statIter = document.getElementById('stat-iter');
+        const statX = document.getElementById('stat-x');
+        const statLoss = document.getElementById('stat-loss');
+
+        // Dark/Light Mode Theme detection and toggle
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        themeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+
+        // Event Listeners
+        lrSlider.addEventListener('input', (e) => {
+            state.lr = parseFloat(e.target.value);
+            lrVal.textContent = state.lr.toFixed(2);
+        });
+
+        x0Slider.addEventListener('input', (e) => {
+            stopSimulation();
+            state.x = parseFloat(e.target.value);
+            x0Val.textContent = state.x.toFixed(1);
+            resetSimulationState(state.x);
+        });
+
+        funcSelect.addEventListener('change', (e) => {
+            stopSimulation();
+            state.functionType = e.target.value;
+            // Adjust slider ranges depending on function
+            if (state.functionType === 'multi-modal') {
+                x0Slider.min = '-2.2';
+                x0Slider.max = '2.2';
+                state.x = -1.8;
+                x0Slider.value = '-1.8';
+                x0Val.textContent = '-1.8';
+            } else {
+                x0Slider.min = '-3.0';
+                x0Slider.max = '3.0';
+                state.x = -2.0;
+                x0Slider.value = '-2.0';
+                x0Val.textContent = '-2.0';
+            }
+            resetSimulationState(state.x);
+        });
+
+        stepBtn.addEventListener('click', () => {
+            stepGradientDescent();
+        });
+
+        autoBtn.addEventListener('click', () => {
+            if (state.isPlaying) {
+                stopSimulation();
+            } else {
+                startSimulation();
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            stopSimulation();
+            resetSimulationState(parseFloat(x0Slider.value));
+        });
+
+        function resetSimulationState(startX) {
+            state.x = startX;
+            state.y = functions[state.functionType].f(startX);
+            state.iterations = 0;
+            state.path = [{x: state.x, y: state.y}];
+            updateStats();
+            draw();
+        }
+
+        function stepGradientDescent() {
+            const fObj = functions[state.functionType];
+            const grad = fObj.df(state.x);
+            
+            // Core formula: x_new = x_old - alpha * f'(x_old)
+            state.x = state.x - state.lr * grad;
+            state.y = fObj.f(state.x);
+            state.iterations++;
+            state.path.push({x: state.x, y: state.y});
+            
+            updateStats();
+            draw();
+            
+            // Auto stop if gradient is extremely small
+            if (Math.abs(grad) < 0.0001) {
+                stopSimulation();
+            }
+        }
+
+        function startSimulation() {
+            state.isPlaying = true;
+            autoBtn.textContent = '⏸️ Pause';
+            autoBtn.className = 'bg-rose-600 hover:bg-rose-700 text-white py-2 px-3 rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-1';
+            state.intervalId = setInterval(stepGradientDescent, 250);
+        }
+
+        function stopSimulation() {
+            state.isPlaying = false;
+            autoBtn.textContent = '▶️ Auto Run';
+            autoBtn.className = 'bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 rounded-lg text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-1';
+            if (state.intervalId) {
+                clearInterval(state.intervalId);
+                state.intervalId = null;
+            }
+        }
+
+        function updateStats() {
+            statIter.textContent = state.iterations;
+            statX.textContent = state.x.toFixed(4);
+            statLoss.textContent = state.y.toFixed(4);
+        }
+
+        // Draw helper functions
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            draw();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function draw() {
+            if (canvas.width === 0 || canvas.height === 0) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const activeFunc = functions[state.functionType];
+            const range = activeFunc.range;
+            
+            // Map coordinates from function space to canvas space
+            function mapX(xVal) {
+                return ((xVal - range.xmin) / (range.xmax - range.xmin)) * canvas.width;
+            }
+            function mapY(yVal) {
+                return canvas.height - ((yVal - range.ymin) / (range.ymax - range.ymin)) * canvas.height;
+            }
+
+            // Draw Coordinate Grid Lines
+            ctx.strokeStyle = '#2d3748';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            // X axis
+            ctx.moveTo(0, mapY(0));
+            ctx.lineTo(canvas.width, mapY(0));
+            // Y axis (center-ish)
+            ctx.moveTo(mapX(0), 0);
+            ctx.lineTo(mapX(0), canvas.height);
+            ctx.stroke();
+
+            // Plot continuous function curve
+            ctx.strokeStyle = '#6366f1'; // Beautiful indigo
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            
+            const steps = 150;
+            for (let i = 0; i <= steps; i++) {
+                const xVal = range.xmin + (i / steps) * (range.xmax - range.xmin);
+                const yVal = activeFunc.f(xVal);
+                if (i === 0) {
+                    ctx.moveTo(mapX(xVal), mapY(yVal));
+                } else {
+                    ctx.lineTo(mapX(xVal), mapY(yVal));
+                }
+            }
+            ctx.stroke();
+
+            // Plot search trajectory/path lines
+            if (state.path.length > 1) {
+                ctx.strokeStyle = '#f59e0b'; // Amber yellow for descent line
+                ctx.lineWidth = 2.5;
+                ctx.setLineDash([5, 5]); // Dashed line
+                ctx.beginPath();
+                ctx.moveTo(mapX(state.path[0].x), mapY(state.path[0].y));
+                for (let i = 1; i < state.path.length; i++) {
+                    ctx.lineTo(mapX(state.path[i].x), mapY(state.path[i].y));
+                }
+                ctx.stroke();
+                ctx.setLineDash([]); // Reset
+            }
+
+            // Plot past points
+            ctx.fillStyle = '#f59e0b';
+            for (let i = 0; i < state.path.length - 1; i++) {
+                ctx.beginPath();
+                ctx.arc(mapX(state.path[i].x), mapY(state.path[i].y), 4, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            // Draw current active node ball
+            ctx.fillStyle = '#10b981'; // Emerald green
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(mapX(state.x), mapY(state.y), 9, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+            // Reset shadows
+            ctx.shadowBlur = 0;
+        }
+
+        // Initialize view
+        setTimeout(() => {
+            resizeCanvas();
+            resetSimulationState(state.x);
+        }, 100);
+    </script>
+</body>
+</html>
