@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tic-Tac-Toe (Unbeatable Minimax)</title>
+    <!-- Tailwind CSS Pinned CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col justify-between transition-colors duration-200">
+    <!-- Header -->
+    <header class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-4 shadow-sm">
+        <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div>
+                <h1 class="text-xl font-bold text-indigo-600 dark:text-indigo-400">🤖 Unbeatable AI Tic-Tac-Toe</h1>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                    Author: Lydia S. Makiwa | Date: June 3, 2026 | Minimax Algorithm
+                </p>
+            </div>
+            <button id="theme-toggle" class="p-1.5 px-3 rounded border border-slate-200 dark:border-slate-700 text-xs bg-slate-50 dark:bg-slate-800">
+                🌓 Theme Toggle
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-md mx-auto w-full p-4 flex-grow flex flex-col justify-center gap-6">
+        <!-- Settings & Game Info -->
+        <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-xl shadow-sm text-center flex flex-col gap-3">
+            <div class="flex justify-between items-center px-2">
+                <span class="text-xs font-semibold text-slate-400 uppercase">Opponent:</span>
+                <span id="ai-status" class="text-xs bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-bold px-2 py-0.5 rounded">Minimax AI (Unbeatable)</span>
+            </div>
+            <div class="text-lg font-bold" id="status-text">Your turn! (You are X)</div>
+        </div>
+
+        <!-- 3x3 Tic Tac Toe Grid -->
+        <div class="grid grid-cols-3 gap-3 aspect-square w-full">
+            <button class="cell bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-5xl font-black rounded-xl aspect-square flex items-center justify-center transition-all duration-150 focus:outline-none" data-index="0"></button>
+            <button class="cell bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-5xl font-black rounded-xl aspect-square flex items-center justify-center transition-all duration-150 focus:outline-none" data-index="1"></button>
+            <button class="cell bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-5xl font-black rounded-xl aspect-square flex items-center justify-center transition-all duration-150 focus:outline-none" data-index="2"></button>
+            <button class="cell bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-5xl font-black rounded-xl aspect-square flex items-center justify-center transition-all duration-150 focus:outline-none" data-index="3"></button>
+            <button class="cell bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-5xl font-black rounded-xl aspect-square flex items-center justify-center transition-all duration-150 focus:outline-none" data-index="4"></button>
+            <button class="cell bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-5xl font-black rounded-xl aspect-square flex items-center justify-center transition-all duration-150 focus:outline-none" data-index="5"></button>
+            <button class="cell bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-5xl font-black rounded-xl aspect-square flex items-center justify-center transition-all duration-150 focus:outline-none" data-index="6"></button>
+            <button class="cell bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-5xl font-black rounded-xl aspect-square flex items-center justify-center transition-all duration-150 focus:outline-none" data-index="7"></button>
+            <button class="cell bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-5xl font-black rounded-xl aspect-square flex items-center justify-center transition-all duration-150 focus:outline-none" data-index="8"></button>
+        </div>
+
+        <!-- Restart Button -->
+        <button id="restart-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl shadow-md transition-all">
+            Reset Match
+        </button>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center p-4 text-xs text-slate-400 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 mt-6">
+        Algorithm demo for AIML students. Proves Minimax can never lose if configured correctly.
+    </footer>
+
+    <!-- Minimax Game Logic -->
+    <script>
+        let board = ["", "", "", "", "", "", "", "", ""];
+        let isGameActive = true;
+        const playerVal = "X";
+        const aiVal = "O";
+
+        const cells = document.querySelectorAll('.cell');
+        const statusText = document.getElementById('status-text');
+        const restartBtn = document.getElementById('restart-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        // Dark/Light toggle
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        themeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+
+        // Winning states indexes
+        const winStates = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Cols
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+        restartBtn.addEventListener('click', restartGame);
+
+        function handleCellClick(e) {
+            const index = parseInt(e.target.getAttribute('data-index'));
+            
+            if (board[index] !== "" || !isGameActive) return;
+
+            // Player moves
+            makeMove(index, playerVal);
+
+            if (checkWin(board, playerVal)) {
+                endGame("🎉 You won! (Incredible, Minimax failed!)");
+                return;
+            }
+            if (checkDraw(board)) {
+                endGame("🤝 It's a draw!");
+                return;
+            }
+
+            // AI moves
+            isGameActive = false; // block user clicks
+            statusText.textContent = "AI is thinking...";
+            setTimeout(() => {
+                const bestIdx = findBestMove(board);
+                makeMove(bestIdx, aiVal);
+                
+                if (checkWin(board, aiVal)) {
+                    endGame("💀 AI wins! Minimax remains unbeatable.");
+                    return;
+                }
+                if (checkDraw(board)) {
+                    endGame("🤝 It's a draw!");
+                    return;
+                }
+                
+                isGameActive = true;
+                statusText.textContent = "Your turn! (You are X)";
+            }, 300);
+        }
+
+        function makeMove(index, player) {
+            board[index] = player;
+            cells[index].textContent = player;
+            if (player === playerVal) {
+                cells[index].classList.add('text-indigo-600', 'dark:text-indigo-400');
+            } else {
+                cells[index].classList.add('text-rose-500');
+            }
+        }
+
+        function endGame(msg) {
+            statusText.textContent = msg;
+            isGameActive = false;
+        }
+
+        function checkWin(tempBoard, player) {
+            return winStates.some(state => {
+                return state.every(index => tempBoard[index] === player);
+            });
+        }
+
+        function checkDraw(tempBoard) {
+            return tempBoard.every(cell => cell !== "");
+        }
+
+        // Minimax implementation
+        function findBestMove(tempBoard) {
+            let bestScore = -Infinity;
+            let bestMove = -1;
+
+            for (let i = 0; i < 9; i++) {
+                if (tempBoard[i] === "") {
+                    tempBoard[i] = aiVal;
+                    let score = minimax(tempBoard, 0, false);
+                    tempBoard[i] = "";
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = i;
+                    }
+                }
+            }
+            return bestMove;
+        }
+
+        function minimax(tempBoard, depth, isMaximizing) {
+            if (checkWin(tempBoard, aiVal)) return 10 - depth;
+            if (checkWin(tempBoard, playerVal)) return depth - 10;
+            if (checkDraw(tempBoard)) return 0;
+
+            if (isMaximizing) {
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (tempBoard[i] === "") {
+                        tempBoard[i] = aiVal;
+                        let score = minimax(tempBoard, depth + 1, false);
+                        tempBoard[i] = "";
+                        bestScore = Math.max(score, bestScore);
+                    }
+                }
+                return bestScore;
+            } else {
+                let bestScore = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (tempBoard[i] === "") {
+                        tempBoard[i] = playerVal;
+                        let score = minimax(tempBoard, depth + 1, true);
+                        tempBoard[i] = "";
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        function restartGame() {
+            board = ["", "", "", "", "", "", "", "", ""];
+            isGameActive = true;
+            statusText.textContent = "Your turn! (You are X)";
+            cells.forEach(cell => {
+                cell.textContent = "";
+                cell.className = "cell bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/20 text-5xl font-black rounded-xl aspect-square flex items-center justify-center transition-all duration-150 focus:outline-none";
+            });
+        }
+    </script>
+</body>
+</html>
