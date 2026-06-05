@@ -1,0 +1,233 @@
+<!--
+  Program Title: Interactive Decision Tree Builder and Entropy Calculator
+  Author: Lydia S. Makiwa
+  Date: June 5, 2026
+  Description: A fully interactive browser application that illustrates how decision trees are constructed
+               from categorical data. Computes Shannon's Entropy, Information Gain, and automatically
+               renders a visual, interactive Decision Tree from input datasets. Great tool for AIML classes.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decision Tree Constructor & Entropy Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen py-8 px-4">
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6">
+        <h1 class="text-3xl font-extrabold text-center text-teal-600 mb-1">Decision Tree & Entropy Interactive Tool</h1>
+        <p class="text-center text-slate-500 mb-6">Designed by Lydia S. Makiwa</p>
+
+        <!-- Dynamic Data Form -->
+        <div class="bg-teal-50 rounded-lg p-4 mb-6">
+            <h2 class="text-lg font-bold text-teal-800 mb-2">Configure Dataset (Play Tennis / Weather Classification)</h2>
+            <p class="text-xs text-teal-700 mb-4">You can load standard sample points or calculate information gain values dynamically.</p>
+            <div class="flex flex-wrap gap-4 mb-4">
+                <button id="loadSamples" class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold py-2 px-4 rounded transition">
+                    Load Classic Dataset
+                </button>
+                <button id="resetDataset" class="bg-slate-500 hover:bg-slate-600 text-white text-sm font-semibold py-2 px-4 rounded transition">
+                    Reset
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table id="datasetTable" class="w-full text-sm text-left text-slate-600 border border-slate-200">
+                    <thead class="text-xs uppercase bg-slate-100 text-slate-700">
+                        <tr>
+                            <th class="px-4 py-2 border">Outlook</th>
+                            <th class="px-4 py-2 border">Humidity</th>
+                            <th class="px-4 py-2 border">Windy</th>
+                            <th class="px-4 py-2 border">Play (Target)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Calculated Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-slate-50 border p-4 rounded-lg">
+                <h3 class="text-md font-bold text-slate-700 mb-2">Entropy & Gain Analytics</h3>
+                <div class="space-y-2 text-sm" id="metricsDisplay">
+                    <p>Load the classic dataset or input data to start computations...</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 border p-4 rounded-lg">
+                <h3 class="text-md font-bold text-slate-700 mb-2">Visual Decision Tree Construction</h3>
+                <div class="p-4 border border-dashed border-slate-300 rounded text-center text-sm font-mono whitespace-pre-wrap bg-white text-teal-800" id="treeVisualization">
+No dataset loaded.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const initialData = [
+            { outlook: 'Sunny', humidity: 'High', windy: 'False', play: 'No' },
+            { outlook: 'Sunny', humidity: 'High', windy: 'True', play: 'No' },
+            { outlook: 'Overcast', humidity: 'High', windy: 'False', play: 'Yes' },
+            { outlook: 'Rainy', humidity: 'Normal', windy: 'False', play: 'Yes' },
+            { outlook: 'Rainy', humidity: 'Normal', windy: 'True', play: 'No' },
+            { outlook: 'Overcast', humidity: 'Normal', windy: 'True', play: 'Yes' },
+            { outlook: 'Sunny', humidity: 'Normal', windy: 'False', play: 'Yes' }
+        ];
+
+        let currentData = [];
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            currentData.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 border-b";
+                tr.innerHTML = `
+                    <td class="px-4 py-1.5 border font-semibold">${row.outlook}</td>
+                    <td class="px-4 py-1.5 border">${row.humidity}</td>
+                    <td class="px-4 py-1.5 border">${row.windy}</td>
+                    <td class="px-4 py-1.5 border font-bold text-teal-600">${row.play}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function calculateEntropy(data) {
+            const n = data.length;
+            if (n === 0) return 0;
+            const counts = {};
+            data.forEach(item => {
+                counts[item.play] = (counts[item.play] || 0) + 1;
+            });
+            let entropy = 0;
+            for (let val in counts) {
+                let p = counts[val] / n;
+                entropy -= p * Math.log2(p);
+            }
+            return entropy;
+        }
+
+        function calculateGain(data, feature) {
+            const systemEntropy = calculateEntropy(data);
+            const n = data.length;
+            if (n === 0) return 0;
+
+            const splits = {};
+            data.forEach(item => {
+                const fVal = item[feature];
+                if (!splits[fVal]) splits[fVal] = [];
+                splits[fVal].push(item);
+            });
+
+            let subsetEntropySum = 0;
+            for (let key in splits) {
+                const subset = splits[key];
+                const weight = subset.length / n;
+                subsetEntropySum += weight * calculateEntropy(subset);
+            }
+
+            return systemEntropy - subsetEntropySum;
+        }
+
+        function buildAndRenderTree() {
+            if (currentData.length === 0) {
+                document.getElementById('metricsDisplay').innerHTML = "<p>No data loaded...</p>";
+                document.getElementById('treeVisualization').innerText = "No dataset loaded.";
+                return;
+            }
+
+            const baseEntropy = calculateEntropy(currentData);
+            const features = ['outlook', 'humidity', 'windy'];
+            let gains = {};
+            let bestFeature = '';
+            let maxGain = -1;
+
+            features.forEach(f => {
+                const g = calculateGain(currentData, f);
+                gains[f] = g;
+                if (g > maxGain) {
+                    maxGain = g;
+                    bestFeature = f;
+                }
+            });
+
+            let metricsHTML = `
+                <div class="mb-2"><strong>Base Dataset Entropy H(S):</strong> <span class="font-mono text-teal-600">${baseEntropy.toFixed(4)}</span></div>
+                <div class="border-t pt-2 mt-2"><strong>Information Gains for Splits:</strong></div>
+                <ul class="list-disc pl-5 font-mono space-y-1">
+            `;
+            features.forEach(f => {
+                metricsHTML += `<li>Gain(\${f}): \${gains[f].toFixed(4)}</li>`;
+            });
+            metricsHTML += `</ul>
+                <p class="mt-4 text-xs font-semibold text-teal-700">Root Node Choice: Splitting on <strong>\${bestFeature}</strong> because it provides the highest information gain!</p>
+            `;
+            document.getElementById('metricsDisplay').innerHTML = metricsHTML;
+
+            let treeASCII = `ROOT NODE: [\${bestFeature}]\n`;
+            const branchValues = [...new Set(currentData.map(item => item[bestFeature]))];
+
+            branchValues.forEach(val => {
+                const subset = currentData.filter(item => item[bestFeature] === val);
+                const plays = subset.map(i => i.play);
+                const allYes = plays.every(p => p === 'Yes');
+                const allNo = plays.every(p => p === 'No');
+                
+                treeASCII += `  ├── Case: \${val}\n`;
+                if (allYes) {
+                    treeASCII += `  │   └── Leaf: [PLAY = YES] (100% confidence)\n`;
+                } else if (allNo) {
+                    treeASCII += `  │   └── Leaf: [PLAY = NO] (100% confidence)\n`;
+                } else {
+                    const nextFeatures = features.filter(f => f !== bestFeature);
+                    let subBest = '';
+                    let subMaxGain = -1;
+                    nextFeatures.forEach(nf => {
+                        const subG = calculateGain(subset, nf);
+                        if (subG > subMaxGain) {
+                            subMaxGain = subG;
+                            subBest = nf;
+                        }
+                    });
+                    
+                    if (subBest) {
+                        treeASCII += `  │   └── Split further on: [\${subBest}]\n`;
+                        const subBranches = [...new Set(subset.map(i => i[subBest]))];
+                        subBranches.forEach(sbVal => {
+                            const leafSubset = subset.filter(i => i[subBest] === sbVal);
+                            const yesCount = leafSubset.filter(i => i.play === 'Yes').length;
+                            const noCount = leafSubset.filter(i => i.play === 'No').length;
+                            const outcome = yesCount >= noCount ? 'Yes' : 'No';
+                            treeASCII += `  │        └── If \${sbVal} ➔ [\${outcome}] (Yes:\${yesCount}, No:\${noCount})\n`;
+                        });
+                    } else {
+                        treeASCII += `  │   └── Majority Leaf: [PLAY = YES] (Mixed patterns)\n`;
+                    }
+                }
+            });
+
+            document.getElementById('treeVisualization').innerText = treeASCII;
+        }
+
+        document.getElementById('loadSamples').addEventListener('click', () => {
+            currentData = JSON.parse(JSON.stringify(initialData));
+            renderTable();
+            buildAndRenderTree();
+        });
+
+        document.getElementById('resetDataset').addEventListener('click', () => {
+            currentData = [];
+            renderTable();
+            buildAndRenderTree();
+        });
+
+        currentData = JSON.parse(JSON.stringify(initialData));
+        renderTable();
+        buildAndRenderTree();
+    </script>
+</body>
+</html>
