@@ -1,0 +1,207 @@
+<!--
+  Program Title: Interactive Linear Regression Visualizer
+  Author: Lydia S. Makiwa
+  Date: June 5, 2026
+  Description: An interactive, visual canvas-based application built to teach students linear regression.
+               Users click to add points to a graph, and a real-time JavaScript calculator runs
+               least-squares linear regression to plot the line of best fit (y = mx + c) and output metrics.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Linear Regression Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        canvas {
+            border: 2px solid #e2e8f0;
+            background-color: #f8fafc;
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen py-10 px-4">
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md p-6">
+        <h1 class="text-3xl font-bold text-center text-indigo-600 mb-2">Interactive Linear Regression Visualizer</h1>
+        <p class="text-center text-gray-500 mb-6">Designed by Lydia S. Makiwa (AIML Student Learning Tool)</p>
+        
+        <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 mb-6 rounded-r">
+            <p class="text-sm text-indigo-700">
+                <strong>How to use:</strong> Click anywhere on the gray canvas grid below to add data points.
+                The script will automatically recalculate the <strong>Line of Best Fit</strong> and display
+                the calculated slope (m), intercept (c), and correlation coefficient (R²) dynamically!
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2 flex flex-col items-center">
+                <canvas id="regressionCanvas" width="500" height="400" class="rounded-lg shadow"></canvas>
+                <div class="mt-4 flex gap-4">
+                    <button id="clearBtn" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded transition">Clear All Points</button>
+                    <button id="demoBtn" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-6 rounded transition">Load Sample Data</button>
+                </div>
+            </div>
+
+            <div class="bg-gray-100 rounded-lg p-5 shadow-inner">
+                <h2 class="text-xl font-bold mb-4 text-indigo-800 border-b pb-2">Analysis Panel</h2>
+                <div class="space-y-4">
+                    <div>
+                        <span class="block text-xs uppercase font-semibold text-gray-500">Number of Points (N)</span>
+                        <span id="numPoints" class="text-2xl font-bold text-gray-800">0</span>
+                    </div>
+                    <div>
+                        <span class="block text-xs uppercase font-semibold text-gray-500">Line Equation</span>
+                        <span id="equation" class="text-xl font-mono font-bold text-indigo-600">y = 0x + 0</span>
+                    </div>
+                    <div>
+                        <span class="block text-xs uppercase font-semibold text-gray-500">Slope (m)</span>
+                        <span id="slope" class="text-lg font-mono font-semibold">0.0000</span>
+                    </div>
+                    <div>
+                        <span class="block text-xs uppercase font-semibold text-gray-500">Y-Intercept (c)</span>
+                        <span id="intercept" class="text-lg font-mono font-semibold">0.0000</span>
+                    </div>
+                    <div>
+                        <span class="block text-xs uppercase font-semibold text-gray-500">R-Squared (R²)</span>
+                        <span id="r2" class="text-lg font-mono font-semibold">0.0000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('regressionCanvas');
+        const ctx = canvas.getContext('2d');
+        const clearBtn = document.getElementById('clearBtn');
+        const demoBtn = document.getElementById('demoBtn');
+
+        let points = [];
+
+        const width = canvas.width;
+        const height = canvas.height;
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+
+            for(let i = 40; i < width; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, height);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(width, i);
+                ctx.stroke();
+            }
+        }
+
+        function drawPoints() {
+            ctx.fillStyle = '#4f46e5';
+            points.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawRegressionLine() {
+            if (points.length < 2) return;
+
+            let xs = points.map(p => p.x);
+            let ys = points.map(p => p.y);
+
+            let n = points.length;
+            let sumX = xs.reduce((a, b) => a + b, 0);
+            let sumY = ys.reduce((a, b) => a + b, 0);
+            let sumXY = points.reduce((acc, p) => acc + (p.x * p.y), 0);
+            let sumX2 = xs.reduce((a, b) => a + (b * b), 0);
+            let sumY2 = ys.reduce((a, b) => a + (b * b), 0);
+
+            let denominator = (n * sumX2 - sumX * sumX);
+            let m, c;
+            
+            if (denominator === 0) {
+                m = 0;
+                c = sumY / n;
+            } else {
+                m = (n * sumXY - sumX * sumY) / denominator;
+                c = (sumY - m * sumX) / n;
+            }
+
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            let startX = 0;
+            let startY = m * startX + c;
+            let endX = width;
+            let endY = m * endX + c;
+
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+
+            let yMean = sumY / n;
+            let totalSumSquares = ys.reduce((acc, y) => acc + Math.pow(y - yMean, 2), 0);
+            let residualSumSquares = points.reduce((acc, p) => {
+                let yPred = m * p.x + c;
+                return acc + Math.pow(p.y - yPred, 2);
+            }, 0);
+
+            let r2 = totalSumSquares === 0 ? 1 : 1 - (residualSumSquares / totalSumSquares);
+
+            let displayM = -m;
+            let displayC = height - c;
+
+            document.getElementById('numPoints').innerText = n;
+            document.getElementById('equation').innerText = `y = ${displayM.toFixed(2)}x + ${displayC.toFixed(0)}`;
+            document.getElementById('slope').innerText = displayM.toFixed(4);
+            document.getElementById('intercept').innerText = displayC.toFixed(4);
+            document.getElementById('r2').innerText = r2.toFixed(4);
+        }
+
+        function updateCanvas() {
+            drawGrid();
+            drawPoints();
+            drawRegressionLine();
+        }
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            points.push({ x, y });
+            updateCanvas();
+        });
+
+        clearBtn.addEventListener('click', () => {
+            points = [];
+            document.getElementById('numPoints').innerText = '0';
+            document.getElementById('equation').innerText = 'y = 0x + 0';
+            document.getElementById('slope').innerText = '0.0000';
+            document.getElementById('intercept').innerText = '0.0000';
+            document.getElementById('r2').innerText = '0.0000';
+            updateCanvas();
+        });
+
+        demoBtn.addEventListener('click', () => {
+            points = [
+                { x: 100, y: 320 },
+                { x: 150, y: 280 },
+                { x: 200, y: 220 },
+                { x: 250, y: 190 },
+                { x: 300, y: 140 },
+                { x: 350, y: 110 }
+            ];
+            updateCanvas();
+        });
+
+        updateCanvas();
+    </script>
+</body>
+</html>
