@@ -1,0 +1,246 @@
+<!--
+Title: Interactive Neural Network Forward Propagation Visualizer
+Author: Lydia S. Makiwa
+Date: June 06, 2026
+
+Description:
+This program is an interactive single-page HTML application designed to demonstrate
+the mechanics of neural networks. It visualizes a 3-layer architecture (2 Inputs,
+3 Hidden units, and 1 Output unit) where users can change inputs and weights
+using interactive sliders and observe forward propagation, bias changes,
+and mathematical calculations in real-time.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Net Forward Propagation - Lydia S. Makiwa</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .wrapper {
+            max-width: 950px;
+            margin: 0 auto;
+        }
+        header {
+            background-color: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 { margin: 0; font-size: 26px; }
+        .author { font-size: 13px; color: #bdc3c7; margin-top: 5px; }
+        .main-layout {
+            display: flex;
+            gap: 20px;
+        }
+        .controls-card {
+            flex: 1;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .visualizer-card {
+            flex: 1.5;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .slider-group {
+            margin-bottom: 15px;
+        }
+        .slider-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider-row input {
+            flex: 1;
+        }
+        .slider-val {
+            font-weight: bold;
+            color: #16a085;
+            min-width: 40px;
+        }
+        svg {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .math-box {
+            background-color: #ebf5fb;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 13.5px;
+            border-left: 5px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <header>
+        <h1>Neural Network Forward Propagation Visualizer</h1>
+        <div class="author">Author: Lydia S. Makiwa | Date: June 06, 2026 | AIML First-Year Student Project</div>
+    </header>
+
+    <div class="main-layout">
+        <div class="controls-card">
+            <h3>Inputs & Param Tuning</h3>
+            <p style="font-size: 12px; color: #666;">Drag sliders to change network parameters and see how outputs change instantly.</p>
+            
+            <div class="slider-group">
+                <label>Input X1</label>
+                <div class="slider-row">
+                    <input type="range" id="x1" min="0" max="1" step="0.1" value="0.5">
+                    <span id="x1Val" class="slider-val">0.5</span>
+                </div>
+            </div>
+            
+            <div class="slider-group">
+                <label>Input X2</label>
+                <div class="slider-row">
+                    <input type="range" id="x2" min="0" max="1" step="0.1" value="0.7">
+                    <span id="x2Val" class="slider-val">0.7</span>
+                </div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+
+            <div class="slider-group">
+                <label>Weight (Inputs -> Hidden Layer)</label>
+                <div class="slider-row">
+                    <input type="range" id="wHidden" min="-2" max="2" step="0.2" value="0.8">
+                    <span id="wHiddenVal" class="slider-val">0.8</span>
+                </div>
+            </div>
+
+            <div class="slider-group">
+                <label>Weight (Hidden -> Output Layer)</label>
+                <div class="slider-row">
+                    <input type="range" id="wOutput" min="-2" max="2" step="0.2" value="1.2">
+                    <span id="wOutputVal" class="slider-val">1.2</span>
+                </div>
+            </div>
+            
+            <div class="math-box">
+                <strong>Current Output Equation:</strong>
+                <div id="outputFormula" style="font-family: monospace; margin-top: 5px;">y = sigmoid(W_out * h)</div>
+            </div>
+        </div>
+
+        <div class="visualizer-card">
+            <h3>Network Topology</h3>
+            <svg id="netSvg" width="500" height="340">
+                <!-- Layers and connections rendered dynamically with JS -->
+            </svg>
+        </div>
+    </div>
+</div>
+
+<script>
+    const x1Slider = document.getElementById('x1');
+    const x2Slider = document.getElementById('x2');
+    const wHiddenSlider = document.getElementById('wHidden');
+    const wOutputSlider = document.getElementById('wOutput');
+
+    const x1Val = document.getElementById('x1Val');
+    const x2Val = document.getElementById('x2Val');
+    const wHiddenVal = document.getElementById('wHiddenVal');
+    const wOutputVal = document.getElementById('wOutputVal');
+    const outputFormula = document.getElementById('outputFormula');
+
+    function sigmoid(z) {
+        return 1 / (1 + Math.exp(-z));
+    }
+
+    function update() {
+        const x1 = parseFloat(x1Slider.value);
+        const x2 = parseFloat(x2Slider.value);
+        const wH = parseFloat(wHiddenSlider.value);
+        const wO = parseFloat(wOutputSlider.value);
+
+        x1Val.innerText = x1.toFixed(1);
+        x2Val.innerText = x2.toFixed(1);
+        wHiddenVal.innerText = wH.toFixed(1);
+        wOutputVal.innerText = wO.toFixed(1);
+
+        // Simple calculations for forward pass
+        // Let hidden neurons compute: h1 = sigmoid(x1 * wH), h2 = sigmoid(x2 * wH), h3 = sigmoid((x1+x2)/2 * wH)
+        const h1 = sigmoid(x1 * wH);
+        const h2 = sigmoid(x2 * wH);
+        const h3 = sigmoid(((x1 + x2) / 2) * wH);
+
+        // Output neuron: out = sigmoid(h1 * wO + h2 * wO + h3 * wO)
+        const netOutput = sigmoid(h1 * wO + h2 * wO + h3 * wO);
+
+        outputFormula.innerHTML = `Hidden Activations: [${h1.toFixed(2)}, ${h2.toFixed(2)}, ${h3.toFixed(2)}]<br>Final Prediction (Y): <strong>${netOutput.toFixed(4)}</strong>`;
+
+        // Render network on SVG
+        const svg = document.getElementById('netSvg');
+        svg.innerHTML = `
+            <!-- Connections Inputs to Hidden -->
+            <line x1="80" y1="100" x2="250" y2="70" stroke="#bdc3c7" stroke-width="${Math.abs(wH)*2 + 1}" />
+            <line x1="80" y1="100" x2="250" y2="170" stroke="#bdc3c7" stroke-width="${Math.abs(wH)*2 + 1}" />
+            <line x1="80" y1="100" x2="250" y2="270" stroke="#bdc3c7" stroke-width="${Math.abs(wH)*2 + 1}" />
+            
+            <line x1="80" y1="240" x2="250" y2="70" stroke="#bdc3c7" stroke-width="${Math.abs(wH)*2 + 1}" />
+            <line x1="80" y1="240" x2="250" y2="170" stroke="#bdc3c7" stroke-width="${Math.abs(wH)*2 + 1}" />
+            <line x1="80" y1="240" x2="250" y2="270" stroke="#bdc3c7" stroke-width="${Math.abs(wH)*2 + 1}" />
+
+            <!-- Connections Hidden to Output -->
+            <line x1="250" y1="70" x2="420" y2="170" stroke="#bdc3c7" stroke-width="${Math.abs(wO)*2 + 1}" />
+            <line x1="250" y1="170" x2="420" y2="170" stroke="#bdc3c7" stroke-width="${Math.abs(wO)*2 + 1}" />
+            <line x1="250" y1="270" x2="420" y2="170" stroke="#bdc3c7" stroke-width="${Math.abs(wO)*2 + 1}" />
+
+            <!-- Input Nodes -->
+            <circle cx="80" cy="100" r="24" fill="#34495e" stroke="#2c3e50" stroke-width="2" />
+            <text x="80" y="105" fill="white" font-size="12" font-weight="bold" text-anchor="middle">X1:${x1}</text>
+
+            <circle cx="80" cy="240" r="24" fill="#34495e" stroke="#2c3e50" stroke-width="2" />
+            <text x="80" y="245" fill="white" font-size="12" font-weight="bold" text-anchor="middle">X2:${x2}</text>
+
+            <!-- Hidden Nodes -->
+            <circle cx="250" cy="70" r="22" fill="#2980b9" stroke="#1f618d" stroke-width="2" />
+            <text x="250" y="74" fill="white" font-size="11" text-anchor="middle">h1:${h1.toFixed(2)}</text>
+
+            <circle cx="250" cy="170" r="22" fill="#2980b9" stroke="#1f618d" stroke-width="2" />
+            <text x="250" y="174" fill="white" font-size="11" text-anchor="middle">h2:${h2.toFixed(2)}</text>
+
+            <circle cx="250" cy="270" r="22" fill="#2980b9" stroke="#1f618d" stroke-width="2" />
+            <text x="250" y="274" fill="white" font-size="11" text-anchor="middle">h3:${h3.toFixed(2)}</text>
+
+            <!-- Output Node -->
+            <circle cx="420" cy="170" r="26" fill="#27ae60" stroke="#1e8449" stroke-width="2" />
+            <text x="420" y="174" fill="white" font-size="12" font-weight="bold" text-anchor="middle">Y:${netOutput.toFixed(2)}</text>
+        `;
+    }
+
+    [x1Slider, x2Slider, wHiddenSlider, wOutputSlider].forEach(slider => {
+        slider.addEventListener('input', update);
+    });
+
+    update();
+</script>
+
+</body>
+</html>
