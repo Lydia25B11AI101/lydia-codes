@@ -1,0 +1,296 @@
+<!--
+Title: Interactive K-Means Clustering Visualizer
+Author: Lydia S. Makiwa
+Date: June 06, 2026
+
+Description:
+This single-file web application provides an interactive simulator for 
+K-Means Clustering. Users can click on a canvas to add points, choose the 
+number of clusters K, and step through the algorithm in real-time (initializing 
+centroids, assigning points to the nearest centroid, and updating centroid positions).
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K-Means Clustering Visualizer - Lydia S. Makiwa</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h1 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 24px;
+        }
+        .meta {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .controls {
+            flex: 1;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .canvas-area {
+            flex: 2;
+            background-color: #ffffff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #bdc3c7;
+            border-radius: 4px;
+            background-color: #fafafa;
+            cursor: crosshair;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button.secondary {
+            background-color: #e74c3c;
+        }
+        button.secondary:hover {
+            background-color: #c0392b;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .stats-box {
+            background-color: #ecf0f1;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Interactive K-Means Clustering Visualizer</h1>
+    <div class="meta">Author: Lydia S. Makiwa | Date: June 06, 2026 | AIML First-Year Student Project</div>
+</header>
+
+<div class="container">
+    <div class="controls">
+        <h3>Simulation Controls</h3>
+        <p style="font-size: 13px; color: #555;">Click the canvas on the right to add data points, configure K, then step through the algorithm.</p>
+        
+        <div>
+            <label for="kSelect">Number of Clusters (K): </label>
+            <select id="kSelect" style="padding: 5px; font-size: 14px;">
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+        </div>
+        
+        <button id="btnInit">Initialize Centroids</button>
+        <button id="btnStep" disabled>Step Algorithm</button>
+        <button id="btnReset" class="secondary">Clear All</button>
+        
+        <div class="stats-box">
+            <strong>Simulation Log:</strong>
+            <div id="statusLog">Waiting for points... Click on canvas to start.</div>
+        </div>
+    </div>
+    
+    <div class="canvas-area">
+        <canvas id="clusterCanvas" width="500" height="400"></canvas>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('clusterCanvas');
+    const ctx = canvas.getContext('2d');
+    const statusLog = document.getElementById('statusLog');
+    
+    let points = [];
+    let centroids = [];
+    let assignments = [];
+    let stepState = 'init'; // 'init', 'assign', 'update'
+    let colors = ['#e74c3c', '#2ecc71', '#3498db', '#f1c40f', '#9b59b6'];
+
+    canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        points.push({ x, y });
+        draw();
+        statusLog.innerText = `Added point at (${Math.round(x)}, ${Math.round(y)}). Total points: ${points.length}`;
+    });
+
+    document.getElementById('btnInit').addEventListener('click', () => {
+        const K = parseInt(document.getElementById('kSelect').value);
+        if (points.length < K) {
+            statusLog.innerText = `Error: Please add at least ${K} points on the canvas.`;
+            return;
+        }
+        
+        // Randomly pick K points as initial centroids
+        centroids = [];
+        let tempPoints = [...points];
+        for (let i = 0; i < K; i++) {
+            const idx = Math.floor(Math.random() * tempPoints.length);
+            centroids.push({ x: tempPoints[idx].x, y: tempPoints[idx].y });
+            tempPoints.splice(idx, 1);
+        }
+        
+        assignments = new Array(points.length).fill(-1);
+        stepState = 'assign';
+        document.getElementById('btnStep').disabled = false;
+        statusLog.innerText = `Initialized ${K} centroids. Ready to assign points.`;
+        draw();
+    });
+
+    document.getElementById('btnStep').addEventListener('click', () => {
+        if (stepState === 'assign') {
+            // Assign points to closest centroid
+            let changed = false;
+            for (let i = 0; i < points.length; i++) {
+                let minDist = Infinity;
+                let bestCentroidIdx = -1;
+                for (let j = 0; j < centroids.length; j++) {
+                    const dist = Math.hypot(points[i].x - centroids[j].x, points[i].y - centroids[j].y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        bestCentroidIdx = j;
+                    }
+                }
+                if (assignments[i] !== bestCentroidIdx) {
+                    assignments[i] = bestCentroidIdx;
+                    changed = true;
+                }
+            }
+            stepState = 'update';
+            statusLog.innerText = `Points assigned to closest centroids. Next step will update centroid coordinates.`;
+        } else if (stepState === 'update') {
+            // Update centroids
+            const K = centroids.length;
+            let sumX = new Array(K).fill(0);
+            let sumY = new Array(K).fill(0);
+            let counts = new Array(K).fill(0);
+            
+            for (let i = 0; i < points.length; i++) {
+                const cIdx = assignments[i];
+                if (cIdx !== -1) {
+                    sumX[cIdx] += points[i].x;
+                    sumY[cIdx] += points[i].y;
+                    counts[cIdx]++;
+                }
+            }
+            
+            let centroidsMoved = false;
+            for (let j = 0; j < K; j++) {
+                if (counts[j] > 0) {
+                    const newX = sumX[j] / counts[j];
+                    const newY = sumY[j] / counts[j];
+                    if (Math.abs(centroids[j].x - newX) > 0.1 || Math.abs(centroids[j].y - newY) > 0.1) {
+                        centroids[j].x = newX;
+                        centroids[j].y = newY;
+                        centroidsMoved = true;
+                    }
+                }
+            }
+            
+            if (!centroidsMoved) {
+                statusLog.innerText = `Centroids stable! K-Means has converged successfully.`;
+                document.getElementById('btnStep').disabled = true;
+            } else {
+                stepState = 'assign';
+                statusLog.innerText = `Centroids updated based on mean coordinates. Ready to re-assign points.`;
+            }
+        }
+        draw();
+    });
+
+    document.getElementById('btnReset').addEventListener('click', () => {
+        points = [];
+        centroids = [];
+        assignments = [];
+        stepState = 'init';
+        document.getElementById('btnStep').disabled = true;
+        statusLog.innerText = `Cleared canvas. Add points to start.`;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw Points
+        for (let i = 0; i < points.length; i++) {
+            ctx.beginPath();
+            ctx.arc(points[i].x, points[i].y, 6, 0, 2 * Math.PI);
+            const color = assignments[i] !== -1 ? colors[assignments[i]] : '#7f8c8d';
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = '#2c3e50';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+        
+        // Draw Centroids
+        for (let j = 0; j < centroids.length; j++) {
+            ctx.beginPath();
+            ctx.arc(centroids[j].x, centroids[j].y, 10, 0, 2 * Math.PI);
+            ctx.fillStyle = colors[j];
+            ctx.fill();
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Draw cross inside centroid
+            ctx.beginPath();
+            ctx.moveTo(centroids[j].x - 6, centroids[j].y);
+            ctx.lineTo(centroids[j].x + 6, centroids[j].y);
+            ctx.moveTo(centroids[j].x, centroids[j].y - 6);
+            ctx.lineTo(centroids[j].x, centroids[j].y + 6);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+    }
+</script>
+
+</body>
+</html>
