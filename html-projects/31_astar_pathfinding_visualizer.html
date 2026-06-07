@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive A* Pathfinding Visualizer</title>
+    <!-- Tailwind CSS Pinned CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-cell {
+            transition: background-color 0.15s ease;
+        }
+        .wall { background-color: #1f2937; }
+        .start { background-color: #10b981; }
+        .target { background-color: #ef4444; }
+        .visited { background-color: #93c5fd; }
+        .path { background-color: #fbbf24; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 min-h-screen flex flex-col items-center p-4">
+    <header class="w-full max-w-4xl mb-6 text-center">
+        <!-- Header comment matching guidelines -->
+        <!-- Title: Interactive A* Pathfinding Visualizer -->
+        <!-- Author: Lydia S. Makiwa -->
+        <!-- Date: June 7, 2026 -->
+        <h1 class="text-3xl font-extrabold text-blue-600 dark:text-blue-400 mb-2">A* Pathfinding Visualizer</h1>
+        <p class="text-sm opacity-80">Created by <span class="font-semibold text-gray-950 dark:text-white">Lydia S. Makiwa</span></p>
+        <p class="text-xs text-gray-500 mt-1">An educational interactive grid designed to demonstrate pathfinding and heuristics.</p>
+    </header>
+
+    <main class="w-full max-w-4xl flex flex-col md:flex-row gap-6">
+        <!-- Controls panel -->
+        <section class="w-full md:w-1/4 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 flex flex-col gap-4">
+            <h2 class="text-lg font-bold">Controls</h2>
+            <div class="text-xs flex flex-col gap-2">
+                <div class="flex items-center gap-2"><div class="w-4 h-4 bg-emerald-500 rounded"></div><span>Start Node</span></div>
+                <div class="flex items-center gap-2"><div class="w-4 h-4 bg-red-500 rounded"></div><span>Target Node</span></div>
+                <div class="flex items-center gap-2"><div class="w-4 h-4 bg-gray-800 rounded"></div><span>Walls</span></div>
+                <div class="flex items-center gap-2"><div class="w-4 h-4 bg-blue-300 rounded"></div><span>Visited Nodes</span></div>
+                <div class="flex items-center gap-2"><div class="w-4 h-4 bg-amber-400 rounded"></div><span>Shortest Path</span></div>
+            </div>
+
+            <hr class="border-gray-200 dark:border-gray-700">
+
+            <button id="run-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition">
+                Start Pathfinding
+            </button>
+            <button id="clear-btn" class="w-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 py-2 px-4 rounded transition">
+                Clear Board
+            </button>
+            
+            <p class="text-xs text-gray-400 italic">Instruction: Click and drag on the grid to create walls. Press 'Start Pathfinding' to run.</p>
+        </section>
+
+        <!-- Grid Visualizer -->
+        <section class="flex-1 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 flex justify-center items-center">
+            <div id="grid-container" class="grid gap-1 w-full max-w-md select-none bg-gray-200 dark:bg-gray-700 p-1 rounded-lg"></div>
+        </section>
+    </main>
+
+    <script>
+        const GRID_ROWS = 15;
+        const GRID_COLS = 15;
+        const gridContainer = document.getElementById('grid-container');
+        const runBtn = document.getElementById('run-btn');
+        const clearBtn = document.getElementById('clear-btn');
+
+        let grid = [];
+        let isMouseDown = false;
+        let startNode = { row: 3, col: 3 };
+        let targetNode = { row: 11, col: 11 };
+
+        // Initialize grid container styling
+        gridContainer.style.gridTemplateRows = `repeat(${GRID_ROWS}, minmax(0, 1fr))`;
+        gridContainer.style.gridTemplateColumns = `repeat(${GRID_COLS}, minmax(0, 1fr))`;
+
+        function createGrid() {
+            gridContainer.innerHTML = '';
+            grid = [];
+            for (let r = 0; r < GRID_ROWS; r++) {
+                grid[r] = [];
+                for (let c = 0; c < GRID_COLS; c++) {
+                    const isStart = (r === startNode.row && c === startNode.col);
+                    const isTarget = (r === targetNode.row && c === targetNode.col);
+
+                    const cell = document.createElement('div');
+                    cell.className = 'w-6 h-6 sm:w-8 sm:h-8 bg-white dark:bg-gray-950 rounded-sm cursor-pointer grid-cell flex items-center justify-center';
+                    
+                    if (isStart) cell.classList.add('start');
+                    if (isTarget) cell.classList.add('target');
+
+                    // Event listeners for walls drawing
+                    cell.addEventListener('mousedown', () => {
+                        isMouseDown = true;
+                        toggleWall(r, c, cell);
+                    });
+                    cell.addEventListener('mouseenter', () => {
+                        if (isMouseDown) toggleWall(r, c, cell);
+                    });
+
+                    gridContainer.appendChild(cell);
+                    grid[r][c] = {
+                        row: r,
+                        col: c,
+                        isWall: false,
+                        isStart,
+                        isTarget,
+                        element: cell,
+                        g: Infinity,
+                        h: Infinity,
+                        f: Infinity,
+                        parent: null
+                    };
+                }
+            }
+        }
+
+        window.addEventListener('mouseup', () => { isMouseDown = false; });
+
+        function toggleWall(r, c, cell) {
+            const node = grid[r][c];
+            if (node.isStart || node.isTarget) return;
+            node.isWall = !node.isWall;
+            if (node.isWall) {
+                cell.classList.add('wall');
+            } else {
+                cell.classList.remove('wall');
+            }
+        }
+
+        // Manhattan Distance Heuristic
+        function getHeuristic(n1, n2) {
+            return Math.abs(n1.row - n2.row) + Math.abs(n1.col - n2.col);
+        }
+
+        async function runAStar() {
+            runBtn.disabled = true;
+            let openSet = [];
+            let start = grid[startNode.row][startNode.col];
+            let target = grid[targetNode.row][targetNode.col];
+
+            start.g = 0;
+            start.h = getHeuristic(start, target);
+            start.f = start.g + start.h;
+            openSet.push(start);
+
+            while (openSet.length > 0) {
+                // Find node in openSet with lowest f score
+                openSet.sort((a, b) => a.f - b.f);
+                let current = openSet.shift();
+
+                if (current.isTarget) {
+                    await drawShortestPath(current);
+                    runBtn.disabled = false;
+                    return;
+                }
+
+                if (!current.isStart && !current.isTarget) {
+                    current.element.classList.add('visited');
+                    await sleep(15);
+                }
+
+                const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+                for (const [dr, dc] of directions) {
+                    const nr = current.row + dr;
+                    const nc = current.col + dc;
+
+                    if (nr >= 0 && nr < GRID_ROWS && nc >= 0 && nc < GRID_COLS) {
+                        const neighbor = grid[nr][nc];
+                        if (neighbor.isWall) continue;
+
+                        const tentativeG = current.g + 1;
+                        if (tentativeG < neighbor.g) {
+                            neighbor.parent = current;
+                            neighbor.g = tentativeG;
+                            neighbor.h = getHeuristic(neighbor, target);
+                            neighbor.f = neighbor.g + neighbor.h;
+
+                            if (!openSet.includes(neighbor)) {
+                                openSet.push(neighbor);
+                            }
+                        }
+                    }
+                }
+            }
+            alert("No path found!");
+            runBtn.disabled = false;
+        }
+
+        async function drawShortestPath(targetNode) {
+            let temp = targetNode.parent;
+            while (temp && !temp.isStart) {
+                temp.element.classList.add('path');
+                await sleep(30);
+                temp = temp.parent;
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        clearBtn.addEventListener('click', createGrid);
+        runBtn.addEventListener('click', runAStar);
+
+        // Initial Grid Setup
+        createGrid();
+    </script>
+</body>
+</html>
